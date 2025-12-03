@@ -3,17 +3,20 @@ import { Workout, ExerciseSet } from "@/types/workout";
 import { NeuCard } from "@/components/ui/neu-card";
 import { NeuButton } from "@/components/ui/neu-button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Check, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Check, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ExerciseLoggerProps {
   workout: Workout;
   onBack: () => void;
+  onWorkoutComplete?: () => void;
 }
 
-export function ExerciseLogger({ workout, onBack }: ExerciseLoggerProps) {
+export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseLoggerProps) {
   const [sets, setSets] = useState<Record<string, ExerciseSet[]>>({});
   const [activeExercise, setActiveExercise] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const addSet = (exerciseId: string) => {
     const exerciseSets = sets[exerciseId] || [];
@@ -56,10 +59,61 @@ export function ExerciseLogger({ workout, onBack }: ExerciseLoggerProps) {
     });
   };
 
-  const finishWorkout = () => {
-    const totalSets = Object.values(sets).flat().filter(s => s.completed).length;
-    toast.success(`Workout complete! ${totalSets} sets logged.`);
-    onBack();
+  const finishWorkout = async () => {
+    const completedSets = Object.entries(sets).flatMap(([exerciseId, exerciseSets]) =>
+      exerciseSets.filter(s => s.completed).map(s => ({ ...s, exerciseId }))
+    );
+
+    if (completedSets.length === 0) {
+      toast.error("Complete at least one set before finishing!");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      // Create workout log
+      const { data: workoutLog, error: logError } = await supabase
+        .from("workout_logs")
+        .insert({
+          workout_title: workout.title,
+          workout_description: workout.description,
+          program_type: workout.programType,
+        })
+        .select()
+        .single();
+
+      if (logError) throw logError;
+
+      // Create exercise sets
+      const exerciseSetsToInsert = completedSets.map((set, index) => {
+        const exercise = workout.exercises.find(e => e.id === set.exerciseId);
+        return {
+          workout_log_id: workoutLog.id,
+          exercise_name: exercise?.name || "Unknown",
+          muscle_group: exercise?.muscleGroup || "Unknown",
+          weight: set.weight,
+          reps: set.reps,
+          set_number: index + 1,
+        };
+      });
+
+      const { error: setsError } = await supabase
+        .from("exercise_sets")
+        .insert(exerciseSetsToInsert);
+
+      if (setsError) throw setsError;
+
+      const totalVolume = completedSets.reduce((acc, s) => acc + s.weight * s.reps, 0);
+      toast.success(`Workout saved! ${completedSets.length} sets, ${totalVolume.toLocaleString()}kg total volume`);
+      onWorkoutComplete?.();
+      onBack();
+    } catch (error) {
+      console.error("Error saving workout:", error);
+      toast.error("Failed to save workout. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -167,9 +221,9 @@ export function ExerciseLogger({ workout, onBack }: ExerciseLoggerProps) {
         })}
       </div>
 
-      <NeuButton variant="default" size="lg" className="w-full" onClick={finishWorkout}>
-        <Check className="h-5 w-5 mr-2" />
-        Finish Workout
+      <NeuButton variant="default" size="lg" className="w-full" onClick={finishWorkout} disabled={saving}>
+        {saving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Check className="h-5 w-5 mr-2" />}
+        {saving ? "Saving..." : "Finish Workout"}
       </NeuButton>
     </section>
   );
