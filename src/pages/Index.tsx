@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ProgramType, Equipment, Workout } from "@/types/workout";
 import { defaultEquipment, workoutPrograms } from "@/data/workouts";
 import { ProgramSelector } from "@/components/ProgramSelector";
 import { EquipmentManager } from "@/components/EquipmentManager";
 import { WorkoutList } from "@/components/WorkoutList";
 import { ExerciseLogger } from "@/components/ExerciseLogger";
+import { WorkoutHistory } from "@/components/WorkoutHistory";
 import { Dumbbell } from "lucide-react";
 
 const Index = () => {
@@ -14,10 +15,15 @@ const Index = () => {
     return saved ? JSON.parse(saved) : defaultEquipment;
   });
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
+  const [historyKey, setHistoryKey] = useState(0);
 
   useEffect(() => {
     localStorage.setItem("gym-equipment", JSON.stringify(equipment));
   }, [equipment]);
+
+  const handleWorkoutComplete = useCallback(() => {
+    setHistoryKey((k) => k + 1);
+  }, []);
 
   const handleAddEquipment = (newEquipment: Equipment) => {
     setEquipment([...equipment, newEquipment]);
@@ -31,7 +37,11 @@ const Index = () => {
     return (
       <main className="min-h-screen bg-background">
         <div className="container max-w-4xl py-8 px-4">
-          <ExerciseLogger workout={activeWorkout} onBack={() => setActiveWorkout(null)} />
+          <ExerciseLogger 
+            workout={activeWorkout} 
+            onBack={() => setActiveWorkout(null)} 
+            onWorkoutComplete={handleWorkoutComplete}
+          />
         </div>
       </main>
     );
@@ -72,6 +82,8 @@ const Index = () => {
             onSelectWorkout={setActiveWorkout}
           />
         )}
+
+        <WorkoutHistory key={historyKey} />
 
         <EquipmentManager
           equipment={equipment}
