@@ -29,8 +29,24 @@ export function EquipmentManager() {
   const [newCategory, setNewCategory] = useState<Equipment["category"]>("machine");
   const [isAdding, setIsAdding] = useState(false);
 
-  const { equipment, isLoading, addEquipment, removeEquipment } = useEquipment();
+  const { equipment, isLoading, addEquipment, removeEquipment, toggleAvailability } = useEquipment();
   const { toast } = useToast();
+
+  const handleToggleAvailability = async (id: string, isAvailable: boolean) => {
+    try {
+      await toggleAvailability.mutateAsync({ id, isAvailable });
+      toast({
+        title: isAvailable ? "Marked as available" : "Marked as unavailable",
+        description: `Equipment ${isAvailable ? "is now" : "is no longer"} in your gym`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update availability",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleAdd = async () => {
     if (newName.trim()) {
@@ -56,6 +72,15 @@ export function EquipmentManager() {
   };
 
   const handleRemove = async (id: string) => {
+    const item = equipment.find(e => e.id === id);
+    if (item?.isDefault) {
+      toast({
+        title: "Cannot delete",
+        description: "Default equipment cannot be removed. Toggle availability instead.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       await removeEquipment.mutateAsync(id);
       toast({
@@ -148,6 +173,7 @@ export function EquipmentManager() {
               key={item.id}
               equipment={item}
               onRemove={handleRemove}
+              onToggleAvailability={handleToggleAvailability}
             />
           ))}
         </div>

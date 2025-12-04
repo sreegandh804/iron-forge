@@ -22,6 +22,8 @@ export interface Equipment {
   name: string;
   category: 'machine' | 'free-weight' | 'cardio' | 'cable' | 'bodyweight';
   exercises?: CustomExercise[];
+  isAvailable?: boolean;
+  isDefault?: boolean;
 }
 
 export interface Exercise {

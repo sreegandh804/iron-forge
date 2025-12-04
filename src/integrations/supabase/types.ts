@@ -51,18 +51,24 @@ export type Database = {
           category: string
           created_at: string | null
           id: string
+          is_available: boolean | null
+          is_default: boolean | null
           name: string
         }
         Insert: {
           category: string
           created_at?: string | null
           id?: string
+          is_available?: boolean | null
+          is_default?: boolean | null
           name: string
         }
         Update: {
           category?: string
           created_at?: string | null
           id?: string
+          is_available?: boolean | null
+          is_default?: boolean | null
           name?: string
         }
         Relationships: []

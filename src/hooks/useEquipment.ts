@@ -72,6 +72,8 @@ export function useEquipment() {
         name: eq.name,
         category: eq.category as Equipment["category"],
         exercises: exercisesByEquipment.get(eq.id) || [],
+        isAvailable: eq.is_available ?? true,
+        isDefault: eq.is_default ?? false,
       }));
     },
   });
@@ -105,11 +107,25 @@ export function useEquipment() {
     },
   });
 
+  const toggleAvailability = useMutation({
+    mutationFn: async ({ id, isAvailable }: { id: string; isAvailable: boolean }) => {
+      const { error } = await supabase
+        .from("equipment")
+        .update({ is_available: isAvailable })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["equipment"] });
+    },
+  });
+
   return {
     equipment: query.data || [],
     isLoading: query.isLoading,
     error: query.error,
     addEquipment,
     removeEquipment,
+    toggleAvailability,
   };
 }
