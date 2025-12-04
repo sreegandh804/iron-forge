@@ -155,16 +155,19 @@ export type Database = {
           body_region: string
           id: string
           name: string
+          recovery_hours: number | null
         }
         Insert: {
           body_region: string
           id?: string
           name: string
+          recovery_hours?: number | null
         }
         Update: {
           body_region?: string
           id?: string
           name?: string
+          recovery_hours?: number | null
         }
         Relationships: []
       }
