@@ -209,7 +209,7 @@ export function WorkoutHistory() {
           </p>
         </NeuCard>
       ) : (
-        <div className="space-y-4">
+        <div className="max-h-[400px] overflow-y-auto space-y-4 pr-2">
           {logs.map((log) => (
             <NeuCard 
               key={log.id} 
