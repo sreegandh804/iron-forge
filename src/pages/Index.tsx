@@ -9,25 +9,67 @@ import { WorkoutHistory } from "@/components/WorkoutHistory";
 import { WorkoutActivityCalendar } from "@/components/WorkoutActivityCalendar";
 import { MuscleBodyDiagram } from "@/components/MuscleBody/MuscleBodyDiagram";
 import { MuscleHighlightProvider } from "@/context/MuscleHighlightContext";
+import { WorkoutCustomizer } from "@/components/WorkoutCustomizer";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Dumbbell } from "lucide-react";
 
+type WorkoutStep = 'browse' | 'customize' | 'logging';
+
 const Index = () => {
   const [selectedProgram, setSelectedProgram] = useState<ProgramType | null>(null);
+  const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
+  const [workoutStep, setWorkoutStep] = useState<WorkoutStep>('browse');
   const [historyKey, setHistoryKey] = useState(0);
 
   const handleWorkoutComplete = useCallback(() => {
     setHistoryKey((k) => k + 1);
   }, []);
 
-  if (activeWorkout) {
+  const handleSelectWorkout = (workout: Workout) => {
+    setSelectedWorkout(workout);
+    setWorkoutStep('customize');
+  };
+
+  const handleStartWorkout = (customizedWorkout: Workout) => {
+    setActiveWorkout(customizedWorkout);
+    setWorkoutStep('logging');
+  };
+
+  const handleBackFromCustomize = () => {
+    setSelectedWorkout(null);
+    setWorkoutStep('browse');
+  };
+
+  const handleBackFromLogging = () => {
+    setActiveWorkout(null);
+    setSelectedWorkout(null);
+    setWorkoutStep('browse');
+  };
+
+  // Customize screen
+  if (workoutStep === 'customize' && selectedWorkout) {
     return (
       <main className="min-h-screen bg-background">
-        <div className="container max-w-4xl py-8 px-4">
+        <div className="container max-w-6xl py-8 px-4">
+          <WorkoutCustomizer
+            workout={selectedWorkout}
+            onBack={handleBackFromCustomize}
+            onStart={handleStartWorkout}
+          />
+        </div>
+      </main>
+    );
+  }
+
+  // Logging screen
+  if (workoutStep === 'logging' && activeWorkout) {
+    return (
+      <main className="min-h-screen bg-background">
+        <div className="container max-w-6xl py-8 px-4">
           <ExerciseLogger 
             workout={activeWorkout} 
-            onBack={() => setActiveWorkout(null)} 
+            onBack={handleBackFromLogging} 
             onWorkoutComplete={handleWorkoutComplete}
           />
         </div>
@@ -74,7 +116,7 @@ const Index = () => {
                 <WorkoutList
                   workouts={workoutPrograms}
                   programType={selectedProgram}
-                  onSelectWorkout={setActiveWorkout}
+                  onSelectWorkout={handleSelectWorkout}
                 />
               )}
 
