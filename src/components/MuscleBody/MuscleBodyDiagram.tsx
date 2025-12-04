@@ -10,26 +10,28 @@ export const MuscleBodyDiagram = () => {
   const { data: recoveryData = [], isLoading } = useMuscleRecoveryStatus();
 
   // Build exercise data for the model based on recovery status
+  // Only include fatigued/recovering muscles - ready muscles show as neutral bodyColor
   const buildMuscleData = () => {
-    // Group by status and build data
-    const fatigued = recoveryData.filter(m => m.status === 'fatigued');
-    const recovering = recoveryData.filter(m => m.status === 'recovering');
-    const ready = recoveryData.filter(m => m.status === 'ready');
-
-    return [
-      ...(fatigued.length > 0 ? [{
-        name: 'Fatigued',
-        muscles: musclesToSlugs(fatigued.map(m => m.name)) as any[],
-      }] : []),
-      ...(recovering.length > 0 ? [{
-        name: 'Recovering', 
-        muscles: musclesToSlugs(recovering.map(m => m.name)) as any[],
-      }] : []),
-      ...(ready.length > 0 ? [{
-        name: 'Ready',
-        muscles: musclesToSlugs(ready.map(m => m.name)) as any[],
-      }] : []),
-    ];
+    const result: any[] = [];
+    
+    recoveryData.forEach(muscle => {
+      if (muscle.status === 'fatigued') {
+        result.push({
+          name: muscle.name,
+          muscles: musclesToSlugs([muscle.name]) as any[],
+          frequency: 2, // Higher frequency = red (fatigued)
+        });
+      } else if (muscle.status === 'recovering') {
+        result.push({
+          name: muscle.name,
+          muscles: musclesToSlugs([muscle.name]) as any[],
+          frequency: 1, // Lower frequency = amber (recovering)
+        });
+      }
+      // 'ready' muscles are NOT added - they show neutral bodyColor
+    });
+    
+    return result;
   };
 
   // Count muscles by status
@@ -84,10 +86,10 @@ export const MuscleBodyDiagram = () => {
             data={buildMuscleData()}
             style={{ width: '100%', padding: '0.5rem' }}
             type={viewSide}
+            bodyColor="#6B7280"
             highlightedColors={[
-              'hsl(var(--destructive))',  // Fatigued - red
-              'hsl(var(--warning))',       // Recovering - yellow
-              'hsl(var(--accent))',        // Ready - green
+              '#F59E0B', // frequency 1 = Recovering (amber)
+              '#EF4444', // frequency 2 = Fatigued (red)
             ]}
           />
         )}
@@ -96,24 +98,17 @@ export const MuscleBodyDiagram = () => {
       {/* Legend */}
       <div className="flex items-center justify-between mt-4 text-xs">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-destructive" />
-          <span className="text-muted-foreground">{statusCounts.fatigued}</span>
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#EF4444' }} />
+          <span className="text-muted-foreground">{statusCounts.fatigued} Fatigued</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-warning" />
-          <span className="text-muted-foreground">{statusCounts.recovering}</span>
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#F59E0B' }} />
+          <span className="text-muted-foreground">{statusCounts.recovering} Recovering</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-accent" />
-          <span className="text-muted-foreground">{statusCounts.ready}</span>
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#6B7280' }} />
+          <span className="text-muted-foreground">{statusCounts.ready} Ready</span>
         </div>
-      </div>
-
-      {/* Status Labels */}
-      <div className="flex items-center justify-between mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-        <span>Fatigued</span>
-        <span>Recovering</span>
-        <span>Ready</span>
       </div>
     </NeuCard>
   );

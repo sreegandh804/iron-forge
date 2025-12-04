@@ -16,40 +16,23 @@ export function WorkoutMuscleDisplay({
   activeExerciseId 
 }: WorkoutMuscleDisplayProps) {
   // Build exercise data for the model
+  // Completed exercises get frequency 2 (green), pending get frequency 1 (amber)
   const buildMuscleData = () => {
-    const muscleGroups = exercises.map(ex => ex.muscleGroup);
-    const completedMuscles = exercises
-      .filter(ex => completedExerciseIds.includes(ex.id))
-      .map(ex => ex.muscleGroup);
-    const activeMuscles = exercises
-      .filter(ex => ex.id === activeExerciseId)
-      .map(ex => ex.muscleGroup);
-
-    // Create exercise data for the model
-    // Completed exercises get frequency 2 (darker), pending get 1
-    const data = exercises.map(ex => ({
-      name: ex.name,
-      muscles: musclesToSlugs([ex.muscleGroup]) as any[],
-    }));
-
-    return data;
-  };
-
-  // Get color based on completion state
-  const getHighlightColor = (muscle: string) => {
-    const exercise = exercises.find(ex => 
-      musclesToSlugs([ex.muscleGroup]).includes(muscle)
-    );
+    const result: any[] = [];
     
-    if (!exercise) return 'var(--muted)';
+    exercises.forEach(ex => {
+      const isCompleted = completedExerciseIds.includes(ex.id);
+      const isActive = ex.id === activeExerciseId;
+      
+      result.push({
+        name: ex.name,
+        muscles: musclesToSlugs([ex.muscleGroup]) as any[],
+        // Active gets highest priority (3), completed (2), pending (1)
+        frequency: isActive ? 3 : (isCompleted ? 2 : 1),
+      });
+    });
     
-    if (completedExerciseIds.includes(exercise.id)) {
-      return 'hsl(var(--accent))'; // Completed - green
-    }
-    if (exercise.id === activeExerciseId) {
-      return 'hsl(var(--primary))'; // Active - primary
-    }
-    return 'hsl(var(--warning))'; // Pending - yellow
+    return result;
   };
 
   const completedCount = completedExerciseIds.length;
@@ -62,26 +45,50 @@ export function WorkoutMuscleDisplay({
         <h3 className="font-bold uppercase text-sm tracking-wide">Muscles Targeted</h3>
       </div>
 
-      <div className="neu-pressed p-4 bg-muted/20">
+      {/* Front View */}
+      <div className="neu-pressed p-3 bg-muted/20 mb-3">
+        <span className="text-xs font-bold uppercase text-muted-foreground mb-2 block text-center">Front</span>
         <Model
           data={buildMuscleData()}
-          style={{ width: '100%', padding: '1rem' }}
-          highlightedColors={['hsl(var(--warning))', 'hsl(var(--accent))']}
+          style={{ width: '100%', padding: '0.5rem' }}
+          type="anterior"
+          bodyColor="#374151"
+          highlightedColors={[
+            '#F97316', // frequency 1 = Pending (orange)
+            '#22C55E', // frequency 2 = Done (green)
+            '#3B82F6', // frequency 3 = Active (blue)
+          ]}
+        />
+      </div>
+
+      {/* Back View */}
+      <div className="neu-pressed p-3 bg-muted/20">
+        <span className="text-xs font-bold uppercase text-muted-foreground mb-2 block text-center">Back</span>
+        <Model
+          data={buildMuscleData()}
+          style={{ width: '100%', padding: '0.5rem' }}
+          type="posterior"
+          bodyColor="#374151"
+          highlightedColors={[
+            '#F97316', // frequency 1 = Pending (orange)
+            '#22C55E', // frequency 2 = Done (green)
+            '#3B82F6', // frequency 3 = Active (blue)
+          ]}
         />
       </div>
 
       {/* Legend */}
       <div className="flex items-center justify-between mt-4 text-xs">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-warning" />
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#F97316' }} />
           <span className="text-muted-foreground">Pending</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-primary" />
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3B82F6' }} />
           <span className="text-muted-foreground">Active</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-full bg-accent" />
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22C55E' }} />
           <span className="text-muted-foreground">Done</span>
         </div>
       </div>
@@ -94,8 +101,11 @@ export function WorkoutMuscleDisplay({
         </div>
         <div className="mt-2 h-2 bg-muted border-2 border-border">
           <div 
-            className="h-full bg-accent transition-all duration-300"
-            style={{ width: `${(completedCount / totalCount) * 100}%` }}
+            className="h-full transition-all duration-300"
+            style={{ 
+              width: `${(completedCount / totalCount) * 100}%`,
+              backgroundColor: '#22C55E'
+            }}
           />
         </div>
       </div>
