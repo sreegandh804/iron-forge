@@ -106,13 +106,13 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 0 0% 0%;
+    --background: 0 0% 8%;
     --foreground: 0 0% 100%;
 
-    --card: 0 0% 0%;
+    --card: 0 0% 12%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 0%;
+    --popover: 0 0% 10%;
     --popover-foreground: 0 0% 100%;
 
     --primary: 0 0% 100%;
@@ -121,25 +121,25 @@ All colors MUST be HSL.
     --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 15%;
+    --muted: 0 0% 18%;
     --muted-foreground: 0 0% 65%;
 
-    --accent: 0 0% 15%;
+    --accent: 0 0% 20%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 100%;
-    --input: 0 0% 100%;
+    --border: 0 0% 30%;
+    --input: 0 0% 30%;
     --ring: 0 0% 100%;
-    --sidebar-background: 240 5.9% 10%;
+    --sidebar-background: 0 0% 10%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 100%;
     --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 0 0% 15%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 100%;
+    --sidebar-border: 0 0% 30%;
     --sidebar-ring: 0 0% 100%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -148,14 +148,26 @@ All colors MUST be HSL.
     --chart-5: 340 75% 55%;
     --sidebar: 0 0% 5%;
     --radius: 0rem;
-    --shadow-2xs: 1px 1px 0px 0px #ffffff;
-    --shadow-xs: 2px 2px 0px 0px #ffffff;
-    --shadow-sm: 3px 3px 0px 0px #ffffff;
-    --shadow: 5px 5px 0px 0px #ffffff;
-    --shadow-md: 8px 8px 0px 0px #ffffff;
-    --shadow-lg: 12px 12px 0px 0px #ffffff;
-    --shadow-xl: 16px 16px 0px 0px #ffffff;
-    --shadow-2xl: 24px 24px 0px 0px #ffffff;
+    --shadow-2xs: 1px 1px 0px 0px hsl(0 0% 30%);
+    --shadow-xs: 2px 2px 0px 0px hsl(0 0% 30%);
+    --shadow-sm: 3px 3px 0px 0px hsl(0 0% 30%);
+    --shadow: 5px 5px 0px 0px hsl(0 0% 30%);
+    --shadow-md: 8px 8px 0px 0px hsl(0 0% 30%);
+    --shadow-lg: 12px 12px 0px 0px hsl(0 0% 30%);
+    --shadow-xl: 16px 16px 0px 0px hsl(0 0% 30%);
+    --shadow-2xl: 24px 24px 0px 0px hsl(0 0% 30%);
+
+    /* Neumorphic shadows for dark mode */
+    --neu-shadow-light: 8px 8px 16px hsl(0 0% 5%), -8px -8px 16px hsl(0 0% 18%);
+    --neu-shadow-inset: inset 4px 4px 8px hsl(0 0% 5%), inset -4px -4px 8px hsl(0 0% 18%);
+    --neu-shadow-pressed: inset 2px 2px 4px hsl(0 0% 5%), inset -2px -2px 4px hsl(0 0% 15%);
+
+    /* Glow for activity calendar */
+    --glow-workout: 142 76% 36%;
+  }
+
+  :root {
+    --glow-workout: 142 76% 36%;
   }
 }
 
