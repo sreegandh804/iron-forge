@@ -14,6 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
+      custom_exercises: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          equipment_id: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          equipment_id: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          equipment_id?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_exercises_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "equipment"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipment: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      exercise_muscle_targets: {
+        Row: {
+          exercise_id: string
+          id: string
+          muscle_group_id: string
+          target_type: string
+        }
+        Insert: {
+          exercise_id: string
+          id?: string
+          muscle_group_id: string
+          target_type: string
+        }
+        Update: {
+          exercise_id?: string
+          id?: string
+          muscle_group_id?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_muscle_targets_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "custom_exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_muscle_targets_muscle_group_id_fkey"
+            columns: ["muscle_group_id"]
+            isOneToOne: false
+            referencedRelation: "muscle_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_sets: {
         Row: {
           created_at: string
@@ -54,6 +143,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      muscle_groups: {
+        Row: {
+          body_region: string
+          id: string
+          name: string
+        }
+        Insert: {
+          body_region: string
+          id?: string
+          name: string
+        }
+        Update: {
+          body_region?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       workout_logs: {
         Row: {

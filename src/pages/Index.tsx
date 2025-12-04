@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
-import { ProgramType, Equipment, Workout } from "@/types/workout";
-import { defaultEquipment, workoutPrograms } from "@/data/workouts";
+import { useState, useCallback } from "react";
+import { ProgramType, Workout } from "@/types/workout";
+import { workoutPrograms } from "@/data/workouts";
 import { ProgramSelector } from "@/components/ProgramSelector";
 import { EquipmentManager } from "@/components/EquipmentManager";
 import { WorkoutList } from "@/components/WorkoutList";
@@ -10,28 +10,12 @@ import { Dumbbell } from "lucide-react";
 
 const Index = () => {
   const [selectedProgram, setSelectedProgram] = useState<ProgramType | null>(null);
-  const [equipment, setEquipment] = useState<Equipment[]>(() => {
-    const saved = localStorage.getItem("gym-equipment");
-    return saved ? JSON.parse(saved) : defaultEquipment;
-  });
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   const [historyKey, setHistoryKey] = useState(0);
-
-  useEffect(() => {
-    localStorage.setItem("gym-equipment", JSON.stringify(equipment));
-  }, [equipment]);
 
   const handleWorkoutComplete = useCallback(() => {
     setHistoryKey((k) => k + 1);
   }, []);
-
-  const handleAddEquipment = (newEquipment: Equipment) => {
-    setEquipment([...equipment, newEquipment]);
-  };
-
-  const handleRemoveEquipment = (id: string) => {
-    setEquipment(equipment.filter((e) => e.id !== id));
-  };
 
   if (activeWorkout) {
     return (
@@ -85,11 +69,7 @@ const Index = () => {
 
         <WorkoutHistory key={historyKey} />
 
-        <EquipmentManager
-          equipment={equipment}
-          onAddEquipment={handleAddEquipment}
-          onRemoveEquipment={handleRemoveEquipment}
-        />
+        <EquipmentManager />
       </div>
 
       {/* Footer */}
