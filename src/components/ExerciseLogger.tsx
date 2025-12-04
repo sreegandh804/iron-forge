@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Workout, ExerciseSet } from "@/types/workout";
 import { NeuCard } from "@/components/ui/neu-card";
 import { NeuButton } from "@/components/ui/neu-button";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Plus, Check, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { WorkoutMuscleDisplay } from "@/components/MuscleBody/WorkoutMuscleDisplay";
 
 interface ExerciseLoggerProps {
   workout: Workout;
@@ -17,6 +18,16 @@ export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseL
   const [sets, setSets] = useState<Record<string, ExerciseSet[]>>({});
   const [activeExercise, setActiveExercise] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Calculate completed exercises (at least one completed set)
+  const completedExerciseIds = useMemo(() => {
+    return workout.exercises
+      .filter(ex => {
+        const exerciseSets = sets[ex.id] || [];
+        return exerciseSets.some(s => s.completed);
+      })
+      .map(ex => ex.id);
+  }, [sets, workout.exercises]);
 
   const addSet = (exerciseId: string) => {
     const exerciseSets = sets[exerciseId] || [];
@@ -128,103 +139,120 @@ export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseL
         </div>
       </div>
 
-      <div className="space-y-4">
-        {workout.exercises.map((exercise, index) => {
-          const exerciseSets = sets[exercise.id] || [];
-          const isActive = activeExercise === exercise.id;
-          
-          return (
-            <NeuCard
-              key={exercise.id}
-              variant={isActive ? "pressed" : "raised"}
-              className="cursor-pointer"
-              onClick={() => setActiveExercise(isActive ? null : exercise.id)}
-            >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="bg-muted text-muted-foreground w-8 h-8 flex items-center justify-center font-bold text-sm border-2 border-border">
-                      {index + 1}
-                    </span>
-                    <div>
-                      <h3 className="font-bold text-lg">{exercise.name}</h3>
-                      <p className="text-xs text-muted-foreground font-mono uppercase">
-                        {exercise.muscleGroup}
-                      </p>
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Exercise List */}
+        <div className="flex-1 space-y-4">
+          {workout.exercises.map((exercise, index) => {
+            const exerciseSets = sets[exercise.id] || [];
+            const isActive = activeExercise === exercise.id;
+            const isCompleted = completedExerciseIds.includes(exercise.id);
+            
+            return (
+              <NeuCard
+                key={exercise.id}
+                variant={isActive ? "pressed" : "raised"}
+                className={`cursor-pointer ${isCompleted ? 'border-accent' : ''}`}
+                onClick={() => setActiveExercise(isActive ? null : exercise.id)}
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-8 h-8 flex items-center justify-center font-bold text-sm border-2 border-border ${
+                        isCompleted ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
+                      }`}>
+                        {isCompleted ? <Check className="h-4 w-4" /> : index + 1}
+                      </span>
+                      <div>
+                        <h3 className="font-bold text-lg">{exercise.name}</h3>
+                        <p className="text-xs text-muted-foreground font-mono uppercase">
+                          {exercise.muscleGroup}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-mono text-muted-foreground">
+                        {exerciseSets.filter(s => s.completed).length}/{exerciseSets.length} sets
+                      </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-mono text-muted-foreground">
-                      {exerciseSets.filter(s => s.completed).length}/{exerciseSets.length} sets
-                    </span>
-                  </div>
-                </div>
 
-                {isActive && (
-                  <div className="space-y-3 pt-4 border-t-2 border-border" onClick={(e) => e.stopPropagation()}>
-                    {exerciseSets.map((set, setIndex) => (
-                      <div
-                        key={set.id}
-                        className={`flex items-center gap-3 p-3 border-2 border-border ${
-                          set.completed ? 'bg-accent' : 'bg-background'
-                        }`}
+                  {isActive && (
+                    <div className="space-y-3 pt-4 border-t-2 border-border" onClick={(e) => e.stopPropagation()}>
+                      {exerciseSets.map((set, setIndex) => (
+                        <div
+                          key={set.id}
+                          className={`flex items-center gap-3 p-3 border-2 border-border ${
+                            set.completed ? 'bg-accent' : 'bg-background'
+                          }`}
+                        >
+                          <span className="font-mono text-sm w-8">#{setIndex + 1}</span>
+                          <div className="flex items-center gap-2 flex-1">
+                            <Input
+                              type="number"
+                              value={set.weight}
+                              onChange={(e) => updateSet(exercise.id, set.id, 'weight', Number(e.target.value))}
+                              className="w-20 h-10 text-center font-mono border-2 border-border"
+                            />
+                            <span className="text-xs text-muted-foreground font-mono">KG</span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-1">
+                            <Input
+                              type="number"
+                              value={set.reps}
+                              onChange={(e) => updateSet(exercise.id, set.id, 'reps', Number(e.target.value))}
+                              className="w-20 h-10 text-center font-mono border-2 border-border"
+                            />
+                            <span className="text-xs text-muted-foreground font-mono">REPS</span>
+                          </div>
+                          <NeuButton
+                            variant={set.completed ? "default" : "outline"}
+                            size="icon"
+                            className="h-10 w-10"
+                            onClick={() => toggleComplete(exercise.id, set.id)}
+                          >
+                            <Check className="h-4 w-4" />
+                          </NeuButton>
+                          <button
+                            onClick={() => removeSet(exercise.id, set.id)}
+                            className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <NeuButton
+                        variant="secondary"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => addSet(exercise.id)}
                       >
-                        <span className="font-mono text-sm w-8">#{setIndex + 1}</span>
-                        <div className="flex items-center gap-2 flex-1">
-                          <Input
-                            type="number"
-                            value={set.weight}
-                            onChange={(e) => updateSet(exercise.id, set.id, 'weight', Number(e.target.value))}
-                            className="w-20 h-10 text-center font-mono border-2 border-border"
-                          />
-                          <span className="text-xs text-muted-foreground font-mono">KG</span>
-                        </div>
-                        <div className="flex items-center gap-2 flex-1">
-                          <Input
-                            type="number"
-                            value={set.reps}
-                            onChange={(e) => updateSet(exercise.id, set.id, 'reps', Number(e.target.value))}
-                            className="w-20 h-10 text-center font-mono border-2 border-border"
-                          />
-                          <span className="text-xs text-muted-foreground font-mono">REPS</span>
-                        </div>
-                        <NeuButton
-                          variant={set.completed ? "default" : "outline"}
-                          size="icon"
-                          className="h-10 w-10"
-                          onClick={() => toggleComplete(exercise.id, set.id)}
-                        >
-                          <Check className="h-4 w-4" />
-                        </NeuButton>
-                        <button
-                          onClick={() => removeSet(exercise.id, set.id)}
-                          className="p-2 text-muted-foreground hover:text-destructive transition-colors"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                    <NeuButton
-                      variant="secondary"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => addSet(exercise.id)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Set
-                    </NeuButton>
-                  </div>
-                )}
-              </div>
-            </NeuCard>
-          );
-        })}
-      </div>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Set
+                      </NeuButton>
+                    </div>
+                  )}
+                </div>
+              </NeuCard>
+            );
+          })}
 
-      <NeuButton variant="default" size="lg" className="w-full" onClick={finishWorkout} disabled={saving}>
-        {saving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Check className="h-5 w-5 mr-2" />}
-        {saving ? "Saving..." : "Finish Workout"}
-      </NeuButton>
+          <NeuButton variant="default" size="lg" className="w-full" onClick={finishWorkout} disabled={saving}>
+            {saving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Check className="h-5 w-5 mr-2" />}
+            {saving ? "Saving..." : "Finish Workout"}
+          </NeuButton>
+        </div>
+
+        {/* Muscle Diagram Sidebar */}
+        <div className="lg:w-72 lg:flex-shrink-0">
+          <div className="lg:sticky lg:top-8">
+            <WorkoutMuscleDisplay
+              exercises={workout.exercises}
+              completedExerciseIds={completedExerciseIds}
+              activeExerciseId={activeExercise}
+            />
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
