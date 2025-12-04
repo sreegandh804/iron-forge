@@ -180,3 +180,81 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Muscle Body Diagram Styles */
+@layer components {
+  .muscle-polygon {
+    @apply transition-all duration-300 cursor-pointer;
+    stroke: hsl(var(--border));
+    stroke-width: 0.3;
+  }
+
+  .muscle-neutral {
+    fill: hsl(var(--muted));
+  }
+
+  .muscle-fatigued {
+    fill: hsl(0 84% 60%);
+    filter: drop-shadow(0 0 8px hsl(0 84% 60% / 0.6));
+  }
+
+  .muscle-recovering {
+    fill: hsl(45 93% 47%);
+    filter: drop-shadow(0 0 4px hsl(45 93% 47% / 0.4));
+  }
+
+  .muscle-ready {
+    fill: hsl(142 76% 36%);
+    filter: drop-shadow(0 0 6px hsl(142 76% 36% / 0.5));
+  }
+
+  .muscle-highlighted-primary {
+    fill: hsl(217 91% 60%);
+    filter: drop-shadow(0 0 10px hsl(217 91% 60% / 0.7));
+  }
+
+  .muscle-highlighted-secondary {
+    fill: hsl(217 91% 60% / 0.4);
+    filter: drop-shadow(0 0 4px hsl(217 91% 60% / 0.3));
+  }
+
+  .muscle-polygon:hover {
+    filter: drop-shadow(0 0 12px hsl(var(--primary) / 0.5));
+    transform: scale(1.02);
+  }
+
+  /* Glow indicators for legend */
+  .muscle-glow-fatigued {
+    box-shadow: 0 0 8px hsl(0 84% 60% / 0.6);
+  }
+
+  .muscle-glow-recovering {
+    box-shadow: 0 0 6px hsl(45 93% 47% / 0.5);
+  }
+
+  .muscle-glow-ready {
+    box-shadow: 0 0 8px hsl(142 76% 36% / 0.6);
+  }
+}
+
+/* Dark mode adjustments for muscle diagram */
+.dark {
+  .muscle-neutral {
+    fill: hsl(var(--muted));
+  }
+
+  .muscle-fatigued {
+    fill: hsl(0 72% 50%);
+    filter: drop-shadow(0 0 10px hsl(0 72% 50% / 0.7));
+  }
+
+  .muscle-recovering {
+    fill: hsl(45 90% 40%);
+    filter: drop-shadow(0 0 6px hsl(45 90% 40% / 0.5));
+  }
+
+  .muscle-ready {
+    fill: hsl(142 70% 40%);
+    filter: drop-shadow(0 0 8px hsl(142 70% 40% / 0.6));
+  }
+}
