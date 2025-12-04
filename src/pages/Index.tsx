@@ -11,8 +11,10 @@ import { MuscleBodyDiagram } from "@/components/MuscleBody/MuscleBodyDiagram";
 import { MuscleHighlightProvider } from "@/context/MuscleHighlightContext";
 import { WorkoutCustomizer } from "@/components/WorkoutCustomizer";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { AnalyticsDashboard } from "@/components/Analytics/AnalyticsDashboard";
-import { Dumbbell } from "lucide-react";
+import { WeightProgressionChart } from "@/components/Analytics/WeightProgressionChart";
+import { useWorkoutAnalytics } from "@/hooks/useWorkoutAnalytics";
+import { NeuCard } from "@/components/ui/neu-card";
+import { Dumbbell, TrendingUp } from "lucide-react";
 
 type WorkoutStep = 'browse' | 'customize' | 'logging';
 
@@ -23,6 +25,8 @@ const Index = () => {
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   const [workoutStep, setWorkoutStep] = useState<WorkoutStep>('browse');
   const [historyKey, setHistoryKey] = useState(0);
+
+  const { data: analyticsData, isLoading: analyticsLoading } = useWorkoutAnalytics(90);
 
   const handleWorkoutComplete = useCallback(() => {
     setHistoryKey((k) => k + 1);
@@ -124,7 +128,27 @@ const Index = () => {
                 />
               )}
 
-              <AnalyticsDashboard />
+              {/* Weight Progression Chart */}
+              <section className="space-y-6">
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold uppercase tracking-tight flex items-center gap-3">
+                    <TrendingUp className="h-6 w-6" />
+                    Weight Progression
+                  </h2>
+                  <p className="text-muted-foreground font-mono text-sm">
+                    Track your strength gains over time
+                  </p>
+                </div>
+                <NeuCard variant="flat" className="p-4">
+                  {analyticsLoading ? (
+                    <div className="h-[250px] flex items-center justify-center text-muted-foreground font-mono">
+                      Loading...
+                    </div>
+                  ) : (
+                    <WeightProgressionChart data={analyticsData?.weightProgression || []} />
+                  )}
+                </NeuCard>
+              </section>
 
               <WorkoutHistory key={historyKey} />
 
