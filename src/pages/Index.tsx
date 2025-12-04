@@ -11,12 +11,14 @@ import { MuscleBodyDiagram } from "@/components/MuscleBody/MuscleBodyDiagram";
 import { MuscleHighlightProvider } from "@/context/MuscleHighlightContext";
 import { WorkoutCustomizer } from "@/components/WorkoutCustomizer";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AnalyticsDashboard } from "@/components/Analytics/AnalyticsDashboard";
 import { Dumbbell } from "lucide-react";
 
 type WorkoutStep = 'browse' | 'customize' | 'logging';
 
 const Index = () => {
   const [selectedProgram, setSelectedProgram] = useState<ProgramType | null>(null);
+  const [selectedCustomProgram, setSelectedCustomProgram] = useState<string | null>(null);
   const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   const [workoutStep, setWorkoutStep] = useState<WorkoutStep>('browse');
@@ -110,15 +112,19 @@ const Index = () => {
               <ProgramSelector
                 selectedProgram={selectedProgram}
                 onSelectProgram={setSelectedProgram}
+                selectedCustomProgram={selectedCustomProgram}
+                onSelectCustomProgram={setSelectedCustomProgram}
               />
 
-              {selectedProgram && (
+              {selectedProgram && !selectedCustomProgram && (
                 <WorkoutList
                   workouts={workoutPrograms}
                   programType={selectedProgram}
                   onSelectWorkout={handleSelectWorkout}
                 />
               )}
+
+              <AnalyticsDashboard />
 
               <WorkoutHistory key={historyKey} />
 

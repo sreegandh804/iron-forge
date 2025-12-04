@@ -46,6 +46,71 @@ export type Database = {
           },
         ]
       }
+      custom_program_workouts: {
+        Row: {
+          created_at: string | null
+          day_label: string | null
+          description: string | null
+          exercises: Json
+          id: string
+          program_id: string
+          sort_order: number | null
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          day_label?: string | null
+          description?: string | null
+          exercises?: Json
+          id?: string
+          program_id: string
+          sort_order?: number | null
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          day_label?: string | null
+          description?: string | null
+          exercises?: Json
+          id?: string
+          program_id?: string
+          sort_order?: number | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_program_workouts_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "custom_programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_programs: {
+        Row: {
+          created_at: string | null
+          days_per_week: number | null
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          days_per_week?: number | null
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          days_per_week?: number | null
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       equipment: {
         Row: {
           category: string
