@@ -3,38 +3,71 @@ import { Equipment } from "@/types/workout";
 import { NeuCard } from "@/components/ui/neu-card";
 import { NeuButton } from "@/components/ui/neu-button";
 import { Input } from "@/components/ui/input";
-import { Plus, X, Dumbbell, Cog, Zap, Cable, User } from "lucide-react";
-
-interface EquipmentManagerProps {
-  equipment: Equipment[];
-  onAddEquipment: (equipment: Equipment) => void;
-  onRemoveEquipment: (id: string) => void;
-}
+import { Plus, Dumbbell, Cog, Zap, Cable, User } from "lucide-react";
+import { EquipmentCard } from "@/components/EquipmentCard";
+import { useEquipment } from "@/hooks/useEquipment";
+import { useToast } from "@/hooks/use-toast";
 
 const categoryIcons = {
-  'machine': Cog,
-  'free-weight': Dumbbell,
-  'cardio': Zap,
-  'cable': Cable,
-  'bodyweight': User,
+  machine: Cog,
+  "free-weight": Dumbbell,
+  cardio: Zap,
+  cable: Cable,
+  bodyweight: User,
 };
 
-const categories: Equipment['category'][] = ['machine', 'free-weight', 'cardio', 'cable', 'bodyweight'];
+const categories: Equipment["category"][] = [
+  "machine",
+  "free-weight",
+  "cardio",
+  "cable",
+  "bodyweight",
+];
 
-export function EquipmentManager({ equipment, onAddEquipment, onRemoveEquipment }: EquipmentManagerProps) {
+export function EquipmentManager() {
   const [newName, setNewName] = useState("");
-  const [newCategory, setNewCategory] = useState<Equipment['category']>("machine");
+  const [newCategory, setNewCategory] = useState<Equipment["category"]>("machine");
   const [isAdding, setIsAdding] = useState(false);
 
-  const handleAdd = () => {
+  const { equipment, isLoading, addEquipment, removeEquipment } = useEquipment();
+  const { toast } = useToast();
+
+  const handleAdd = async () => {
     if (newName.trim()) {
-      onAddEquipment({
-        id: Date.now().toString(),
-        name: newName.trim(),
-        category: newCategory,
+      try {
+        await addEquipment.mutateAsync({
+          name: newName.trim(),
+          category: newCategory,
+        });
+        toast({
+          title: "Success",
+          description: "Equipment added",
+        });
+        setNewName("");
+        setIsAdding(false);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to add equipment",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    try {
+      await removeEquipment.mutateAsync(id);
+      toast({
+        title: "Deleted",
+        description: "Equipment removed",
       });
-      setNewName("");
-      setIsAdding(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove equipment",
+        variant: "destructive",
+      });
     }
   };
 
@@ -42,8 +75,12 @@ export function EquipmentManager({ equipment, onAddEquipment, onRemoveEquipment 
     <section className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold uppercase tracking-tight">Your Equipment</h2>
-          <p className="text-muted-foreground font-mono text-sm">Log machines available at your gym</p>
+          <h2 className="text-2xl font-bold uppercase tracking-tight">
+            Your Equipment
+          </h2>
+          <p className="text-muted-foreground font-mono text-sm">
+            Log machines available at your gym
+          </p>
         </div>
         <NeuButton
           variant="outline"
@@ -81,40 +118,49 @@ export function EquipmentManager({ equipment, onAddEquipment, onRemoveEquipment 
               })}
             </div>
             <div className="flex gap-2">
-              <NeuButton onClick={handleAdd} size="sm">Save</NeuButton>
-              <NeuButton variant="ghost" size="sm" onClick={() => setIsAdding(false)}>Cancel</NeuButton>
+              <NeuButton
+                onClick={handleAdd}
+                size="sm"
+                disabled={addEquipment.isPending}
+              >
+                {addEquipment.isPending ? "Saving..." : "Save"}
+              </NeuButton>
+              <NeuButton
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsAdding(false)}
+              >
+                Cancel
+              </NeuButton>
             </div>
           </div>
         </NeuCard>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {equipment.map((item) => {
-          const Icon = categoryIcons[item.category];
-          return (
-            <NeuCard key={item.id} variant="raised" className="p-4 flex items-center justify-between group">
-              <div className="flex items-center gap-3">
-                <Icon className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-bold">{item.name}</p>
-                  <p className="text-xs text-muted-foreground font-mono uppercase">{item.category}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => onRemoveEquipment(item.id)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive hover:text-destructive-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </NeuCard>
-          );
-        })}
-      </div>
+      {isLoading ? (
+        <NeuCard variant="flat" className="text-center py-12">
+          <p className="text-muted-foreground font-mono">Loading equipment...</p>
+        </NeuCard>
+      ) : (
+        <div className="grid gap-3">
+          {equipment.map((item) => (
+            <EquipmentCard
+              key={item.id}
+              equipment={item}
+              onRemove={handleRemove}
+            />
+          ))}
+        </div>
+      )}
 
-      {equipment.length === 0 && !isAdding && (
+      {!isLoading && equipment.length === 0 && !isAdding && (
         <NeuCard variant="flat" className="border-dashed text-center py-12">
-          <p className="text-muted-foreground font-mono">No equipment added yet</p>
-          <p className="text-sm text-muted-foreground mt-1">Click "Add" to log your gym's equipment</p>
+          <p className="text-muted-foreground font-mono">
+            No equipment added yet
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Click "Add" to log your gym's equipment
+          </p>
         </NeuCard>
       )}
     </section>
