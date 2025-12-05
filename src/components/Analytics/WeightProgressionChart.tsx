@@ -1,11 +1,21 @@
 import { useState, useMemo, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { WeightProgression } from '@/hooks/useWorkoutAnalytics';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, subDays, startOfYear, isAfter } from 'date-fns';
 
 interface WeightProgressionChartProps {
   data: WeightProgression[];
 }
+
+type TimeRange = '1M' | '3M' | '6M' | 'YTD' | 'ALL';
+
+const TIME_RANGES: { key: TimeRange; label: string }[] = [
+  { key: '1M', label: '1M' },
+  { key: '3M', label: '3M' },
+  { key: '6M', label: '6M' },
+  { key: 'YTD', label: 'YTD' },
+  { key: 'ALL', label: 'ALL' },
+];
 
 const COLORS = [
   'hsl(var(--chart-1))',
@@ -16,13 +26,32 @@ const COLORS = [
 ];
 
 export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
-  // Get unique exercises
-  const exercises = useMemo(() => {
-    const unique = [...new Set(data.map(d => d.exercise))];
-    return unique.slice(0, 5); // Limit to 5 exercises
-  }, [data]);
-
+  const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
   const [selectedExercises, setSelectedExercises] = useState<string[]>([]);
+
+  // Filter data by time range
+  const filteredData = useMemo(() => {
+    if (timeRange === 'ALL') return data;
+    
+    const now = new Date();
+    let cutoffDate: Date;
+    
+    switch (timeRange) {
+      case '1M': cutoffDate = subDays(now, 30); break;
+      case '3M': cutoffDate = subDays(now, 90); break;
+      case '6M': cutoffDate = subDays(now, 180); break;
+      case 'YTD': cutoffDate = startOfYear(now); break;
+      default: return data;
+    }
+    
+    return data.filter(d => isAfter(parseISO(d.date), cutoffDate));
+  }, [data, timeRange]);
+
+  // Get unique exercises from filtered data
+  const exercises = useMemo(() => {
+    const unique = [...new Set(filteredData.map(d => d.exercise))];
+    return unique.slice(0, 5);
+  }, [filteredData]);
 
   // Initialize selected exercises when data loads
   useEffect(() => {
@@ -35,7 +64,7 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
   const chartData = useMemo(() => {
     const dateMap: Record<string, Record<string, number>> = {};
     
-    data.forEach(d => {
+    filteredData.forEach(d => {
       if (!selectedExercises.includes(d.exercise)) return;
       
       if (!dateMap[d.date]) {
@@ -51,7 +80,7 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
         ...exercises,
       }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [data, selectedExercises]);
+  }, [filteredData, selectedExercises]);
 
   const toggleExercise = (exercise: string) => {
     setSelectedExercises(prev =>
@@ -71,6 +100,23 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
 
   return (
     <div className="space-y-4">
+      {/* Time Range Filter */}
+      <div className="flex flex-wrap gap-2">
+        {TIME_RANGES.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setTimeRange(key)}
+            className={`px-3 py-1 text-xs font-mono font-bold border-2 border-border transition-all ${
+              timeRange === key
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Exercise Filter */}
       <div className="flex flex-wrap gap-2">
         {exercises.map((exercise, idx) => (
