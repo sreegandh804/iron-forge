@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { WeightProgression } from '@/hooks/useWorkoutAnalytics';
 import { format, parseISO } from 'date-fns';
@@ -22,7 +22,14 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
     return unique.slice(0, 5); // Limit to 5 exercises
   }, [data]);
 
-  const [selectedExercises, setSelectedExercises] = useState<string[]>(exercises.slice(0, 3));
+  const [selectedExercises, setSelectedExercises] = useState<string[]>([]);
+
+  // Initialize selected exercises when data loads
+  useEffect(() => {
+    if (exercises.length > 0 && selectedExercises.length === 0) {
+      setSelectedExercises(exercises.slice(0, 3));
+    }
+  }, [exercises]);
 
   // Transform data for chart
   const chartData = useMemo(() => {
