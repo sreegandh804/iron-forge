@@ -26,7 +26,7 @@ const Index = () => {
   const [workoutStep, setWorkoutStep] = useState<WorkoutStep>('browse');
   const [historyKey, setHistoryKey] = useState(0);
 
-  const { data: analyticsData, isLoading: analyticsLoading } = useWorkoutAnalytics(90);
+  const { data: analyticsData, isLoading: analyticsLoading } = useWorkoutAnalytics(730);
 
   const handleWorkoutComplete = useCallback(() => {
     setHistoryKey((k) => k + 1);
