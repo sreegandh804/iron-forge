@@ -17,16 +17,14 @@ const TIME_RANGES: { key: TimeRange; label: string }[] = [
   { key: 'ALL', label: 'ALL' },
 ];
 
-const COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-];
+// Generate distinct colors for any number of exercises
+const generateColor = (index: number, total: number) => {
+  const hue = (index * 360) / Math.max(total, 1);
+  return `hsl(${hue}, 70%, 50%)`;
+};
 
 export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
-  const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
+  const [timeRange, setTimeRange] = useState<TimeRange>('YTD');
   const [selectedExercises, setSelectedExercises] = useState<string[]>([]);
 
   // Filter data by time range
@@ -49,14 +47,13 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
 
   // Get unique exercises from filtered data
   const exercises = useMemo(() => {
-    const unique = [...new Set(filteredData.map(d => d.exercise))];
-    return unique.slice(0, 5);
+    return [...new Set(filteredData.map(d => d.exercise))];
   }, [filteredData]);
 
-  // Initialize selected exercises when data loads
+  // Initialize selected exercises when data loads - select all by default
   useEffect(() => {
     if (exercises.length > 0 && selectedExercises.length === 0) {
-      setSelectedExercises(exercises.slice(0, 3));
+      setSelectedExercises(exercises);
     }
   }, [exercises]);
 
@@ -118,8 +115,8 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
       </div>
 
       {/* Exercise Filter */}
-      <div className="flex flex-wrap gap-2">
-        {exercises.map((exercise, idx) => (
+      <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto pr-2">
+        {exercises.map((exercise) => (
           <button
             key={exercise}
             onClick={() => toggleExercise(exercise)}
@@ -161,9 +158,9 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
                 key={exercise}
                 type="monotone"
                 dataKey={exercise}
-                stroke={COLORS[idx % COLORS.length]}
+                stroke={generateColor(idx, selectedExercises.length)}
                 strokeWidth={2}
-                dot={{ fill: COLORS[idx % COLORS.length], strokeWidth: 0, r: 3 }}
+                dot={{ fill: generateColor(idx, selectedExercises.length), strokeWidth: 0, r: 3 }}
                 connectNulls
               />
             ))}
