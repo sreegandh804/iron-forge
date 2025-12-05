@@ -1,17 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { startOfDay, subMonths, format } from "date-fns";
+import { startOfDay, subDays, format } from "date-fns";
 
 export function useWorkoutDates() {
   return useQuery({
     queryKey: ["workout-dates"],
     queryFn: async () => {
-      const threeMonthsAgo = subMonths(new Date(), 3);
+      // Use 400 days to capture seeded historical data from 2024
+      const startDate = subDays(new Date(), 400);
       
       const { data, error } = await supabase
         .from("workout_logs")
         .select("completed_at")
-        .gte("completed_at", threeMonthsAgo.toISOString())
+        .gte("completed_at", startDate.toISOString())
         .order("completed_at", { ascending: true });
 
       if (error) throw error;

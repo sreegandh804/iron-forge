@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Flame } from "lucide-react";
 
-const WEEKS_TO_SHOW = 13;
+const WEEKS_TO_SHOW = 60;
 const DAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
 
 export function WorkoutActivityCalendar() {

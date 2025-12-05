@@ -27,10 +27,11 @@ export interface PersonalRecord {
   date: string;
 }
 
-export const useWorkoutAnalytics = (days: number = 90) => {
+export const useWorkoutAnalytics = (days: number = 400) => {
   return useQuery({
     queryKey: ['workout-analytics', days],
     queryFn: async () => {
+      // Use 400 days default to capture seeded historical data from 2024
       const startDate = subDays(new Date(), days).toISOString();
 
       // Fetch all exercise sets within the time period
