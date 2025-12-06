@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { WorkoutMuscleDisplay } from "@/components/MuscleBody/WorkoutMuscleDisplay";
 import { useLastWorkoutSets } from "@/hooks/useLastWorkoutSets";
 import { usePersonalRecords } from "@/hooks/usePersonalRecords";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ExerciseLoggerProps {
   workout: Workout;
@@ -21,8 +22,9 @@ export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseL
   const [saving, setSaving] = useState(false);
   const [newPRs, setNewPRs] = useState<Set<string>>(new Set());
 
+  const { user } = useAuth();
   const { data: lastWorkoutSets } = useLastWorkoutSets();
-  const { data: personalRecords, refetch: refetchPRs } = usePersonalRecords();
+  const { data: personalRecords } = usePersonalRecords();
 
   // Calculate completed exercises (at least one completed set)
   const completedExerciseIds = useMemo(() => {
@@ -116,20 +118,21 @@ export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseL
     setSaving(true);
 
     try {
-      // Create workout log
+      // Create workout log with user_id
       const { data: workoutLog, error: logError } = await supabase
         .from("workout_logs")
         .insert({
           workout_title: workout.title,
           workout_description: workout.description,
           program_type: workout.programType,
+          user_id: user?.id,
         })
         .select()
         .single();
 
       if (logError) throw logError;
 
-      // Create exercise sets
+      // Create exercise sets with user_id
       const exerciseSetsToInsert = completedSets.map((set, index) => {
         const exercise = workout.exercises.find(e => e.id === set.exerciseId);
         return {
@@ -139,6 +142,7 @@ export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseL
           weight: set.weight,
           reps: set.reps,
           set_number: index + 1,
+          user_id: user?.id,
         };
       });
 
