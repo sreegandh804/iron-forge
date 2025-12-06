@@ -14,10 +14,13 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { WeightProgressionChart } from "@/components/Analytics/WeightProgressionChart";
 import { useWorkoutAnalytics } from "@/hooks/useWorkoutAnalytics";
 import { useEquipment } from "@/hooks/useEquipment";
+import { useAuth } from "@/hooks/useAuth";
 import { NeuCard } from "@/components/ui/neu-card";
+import { NeuButton } from "@/components/ui/neu-button";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
-import { Dumbbell, TrendingUp, ChevronDown } from "lucide-react";
+import { Dumbbell, TrendingUp, ChevronDown, LogOut } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { toast } from "sonner";
 
 type WorkoutStep = 'browse' | 'customize' | 'logging';
 
@@ -32,6 +35,14 @@ const Index = () => {
 
   const { data: analyticsData, isLoading: analyticsLoading } = useWorkoutAnalytics(730);
   const { equipment } = useEquipment();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      toast.error('Failed to sign out');
+    }
+  };
 
   // Get IDs of available equipment
   const availableEquipmentIds = useMemo(() => {
@@ -131,7 +142,12 @@ const Index = () => {
                   </p>
                 </div>
               </div>
-              <ThemeToggle />
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <NeuButton variant="outline" size="icon" onClick={handleSignOut} title="Sign out">
+                  <LogOut className="h-4 w-4" />
+                </NeuButton>
+              </div>
             </div>
           </div>
         </header>

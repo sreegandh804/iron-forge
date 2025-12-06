@@ -182,6 +182,7 @@ export type Database = {
           muscle_group: string
           reps: number
           set_number: number
+          user_id: string | null
           weight: number
           workout_log_id: string
         }
@@ -192,6 +193,7 @@ export type Database = {
           muscle_group: string
           reps?: number
           set_number?: number
+          user_id?: string | null
           weight?: number
           workout_log_id: string
         }
@@ -202,6 +204,7 @@ export type Database = {
           muscle_group?: string
           reps?: number
           set_number?: number
+          user_id?: string | null
           weight?: number
           workout_log_id?: string
         }
@@ -236,12 +239,31 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       workout_logs: {
         Row: {
           completed_at: string
           created_at: string
           id: string
           program_type: string
+          user_id: string | null
           workout_description: string | null
           workout_title: string
         }
@@ -250,6 +272,7 @@ export type Database = {
           created_at?: string
           id?: string
           program_type: string
+          user_id?: string | null
           workout_description?: string | null
           workout_title: string
         }
@@ -258,6 +281,7 @@ export type Database = {
           created_at?: string
           id?: string
           program_type?: string
+          user_id?: string | null
           workout_description?: string | null
           workout_title?: string
         }
