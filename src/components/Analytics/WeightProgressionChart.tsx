@@ -3,12 +3,16 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { WeightProgression } from '@/hooks/useWorkoutAnalytics';
 import { format, parseISO, subDays, startOfYear, isAfter } from 'date-fns';
 
+import { VolumeData } from '@/hooks/useWorkoutAnalytics';
+
 interface WeightProgressionChartProps {
   data: WeightProgression[];
+  volumeData?: VolumeData[];
 }
 
 type TimeRange = '1M' | '3M' | '6M' | 'YTD' | 'ALL';
 type ViewMode = 'exercise' | 'muscle';
+type MuscleMetric = 'weight' | 'volume';
 
 const TIME_RANGES: { key: TimeRange; label: string }[] = [
   { key: '1M', label: '1M' },
@@ -24,9 +28,10 @@ const generateColor = (index: number, total: number) => {
   return `hsl(${hue}, 70%, 50%)`;
 };
 
-export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
+export function WeightProgressionChart({ data, volumeData = [] }: WeightProgressionChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('YTD');
   const [viewMode, setViewMode] = useState<ViewMode>('exercise');
+  const [muscleMetric, setMuscleMetric] = useState<MuscleMetric>('weight');
   const [selectedExercises, setSelectedExercises] = useState<string[]>([]);
   const [selectedMuscles, setSelectedMuscles] = useState<string[]>([]);
 
@@ -95,7 +100,7 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
   }, [filteredData, selectedExercises]);
 
   // Transform data for chart - by muscle group (aggregate max weight per muscle per date)
-  const chartDataByMuscle = useMemo(() => {
+  const chartDataByMuscleWeight = useMemo(() => {
     const dateMap: Record<string, Record<string, number>> = {};
     
     filteredData.forEach(d => {
@@ -117,6 +122,45 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
       }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [filteredData, selectedMuscles]);
+
+  // Transform data for chart - by muscle group volume (weekly total volume per muscle)
+  const chartDataByMuscleVolume = useMemo(() => {
+    if (!volumeData || volumeData.length === 0) return [];
+    
+    // Filter volume data by time range
+    const now = new Date();
+    let cutoffDate: Date | null = null;
+    
+    switch (timeRange) {
+      case '1M': cutoffDate = subDays(now, 30); break;
+      case '3M': cutoffDate = subDays(now, 90); break;
+      case '6M': cutoffDate = subDays(now, 180); break;
+      case 'YTD': cutoffDate = startOfYear(now); break;
+      default: cutoffDate = null;
+    }
+
+    const filtered = cutoffDate 
+      ? volumeData.filter(v => isAfter(parseISO(v.week), cutoffDate!))
+      : volumeData;
+
+    return filtered
+      .map(v => {
+        const muscleVolumes: Record<string, number> = {};
+        Object.entries(v.muscleVolumes).forEach(([muscle, vol]) => {
+          if (selectedMuscles.includes(muscle)) {
+            muscleVolumes[muscle] = vol;
+          }
+        });
+        return {
+          date: v.week,
+          formattedDate: format(parseISO(v.week), 'MMM d'),
+          ...muscleVolumes,
+        };
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [volumeData, timeRange, selectedMuscles]);
+
+  const chartDataByMuscle = muscleMetric === 'weight' ? chartDataByMuscleWeight : chartDataByMuscleVolume;
 
   const chartData = viewMode === 'exercise' ? chartDataByExercise : chartDataByMuscle;
   const selectedItems = viewMode === 'exercise' ? selectedExercises : selectedMuscles;
@@ -148,7 +192,7 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
   return (
     <div className="space-y-4">
       {/* View Mode Toggle */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setViewMode('exercise')}
           className={`px-3 py-1 text-xs font-mono font-bold border-2 border-border transition-all ${
@@ -169,6 +213,33 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
         >
           By Muscle
         </button>
+
+        {/* Muscle Metric Toggle - only show in muscle view */}
+        {viewMode === 'muscle' && (
+          <>
+            <span className="text-muted-foreground mx-1">|</span>
+            <button
+              onClick={() => setMuscleMetric('weight')}
+              className={`px-3 py-1 text-xs font-mono font-bold border-2 border-border transition-all ${
+                muscleMetric === 'weight'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              Max Weight
+            </button>
+            <button
+              onClick={() => setMuscleMetric('volume')}
+              className={`px-3 py-1 text-xs font-mono font-bold border-2 border-border transition-all ${
+                muscleMetric === 'volume'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              Total Volume
+            </button>
+          </>
+        )}
       </div>
 
       {/* Time Range Filter */}
@@ -234,7 +305,7 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
             <YAxis 
               tick={{ fontSize: 10 }}
               stroke="hsl(var(--muted-foreground))"
-              unit="kg"
+              unit={viewMode === 'muscle' && muscleMetric === 'volume' ? '' : 'kg'}
             />
             <Tooltip
               contentStyle={{

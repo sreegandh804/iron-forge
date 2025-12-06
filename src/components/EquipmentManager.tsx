@@ -167,15 +167,17 @@ export function EquipmentManager() {
           <p className="text-muted-foreground font-mono">Loading equipment...</p>
         </NeuCard>
       ) : (
-        <div className="grid gap-3">
-          {equipment.map((item) => (
-            <EquipmentCard
-              key={item.id}
-              equipment={item}
-              onRemove={handleRemove}
-              onToggleAvailability={handleToggleAvailability}
-            />
-          ))}
+        <div className="max-h-[400px] overflow-y-auto pr-2">
+          <div className="grid gap-3">
+            {equipment.map((item) => (
+              <EquipmentCard
+                key={item.id}
+                equipment={item}
+                onRemove={handleRemove}
+                onToggleAvailability={handleToggleAvailability}
+              />
+            ))}
+          </div>
         </div>
       )}
 
