@@ -24,11 +24,11 @@ export const useMuscleRecoveryStatus = () => {
 
       if (muscleError) throw muscleError;
 
-      // Fetch the most recent workout for each muscle group
+      // Fetch the most recent workout for each muscle group using workout_logs.completed_at
       const { data: recentSets, error: setsError } = await supabase
         .from('exercise_sets')
-        .select('muscle_group, created_at')
-        .order('created_at', { ascending: false });
+        .select('muscle_group, workout_logs!inner(completed_at)')
+        .order('workout_logs(completed_at)', { ascending: false });
 
       if (setsError) throw setsError;
 
@@ -36,7 +36,8 @@ export const useMuscleRecoveryStatus = () => {
       const muscleLastWorked: Record<string, Date> = {};
       recentSets?.forEach(set => {
         if (!muscleLastWorked[set.muscle_group]) {
-          muscleLastWorked[set.muscle_group] = new Date(set.created_at);
+          const workoutLog = set.workout_logs as unknown as { completed_at: string };
+          muscleLastWorked[set.muscle_group] = new Date(workoutLog.completed_at);
         }
       });
 

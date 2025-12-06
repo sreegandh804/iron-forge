@@ -1,4 +1,4 @@
-export type ProgramType = 'full-body' | 'ppl' | 'upper-lower';
+export type ProgramType = 'full-body' | 'ppl' | 'upper-lower' | 'custom';
 
 export type BodyRegion = 'upper-body' | 'lower-body' | 'core';
 
