@@ -12,8 +12,10 @@ import { WorkoutCustomizer } from "@/components/WorkoutCustomizer";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WeightProgressionChart } from "@/components/Analytics/WeightProgressionChart";
 import { ProgramExerciseCustomizer } from "@/components/ProgramExerciseCustomizer";
+import { CustomProgramManager } from "@/components/CustomProgramManager";
 import { useWorkoutAnalytics } from "@/hooks/useWorkoutAnalytics";
 import { useWorkoutTemplates } from "@/hooks/useWorkoutTemplates";
+import { useCustomPrograms } from "@/hooks/useCustomPrograms";
 import { useAuth } from "@/hooks/useAuth";
 import { NeuCard } from "@/components/ui/neu-card";
 import { NeuButton } from "@/components/ui/neu-button";
@@ -35,7 +37,11 @@ const Index = () => {
 
   const { data: analyticsData, isLoading: analyticsLoading } = useWorkoutAnalytics(730);
   const { workouts: templateWorkouts, isLoading: templatesLoading } = useWorkoutTemplates(selectedProgram);
+  const { programs: customPrograms } = useCustomPrograms();
   const { user, signOut } = useAuth();
+
+  // Get selected custom program details
+  const selectedCustomProgramDetails = customPrograms.find(p => p.id === selectedCustomProgram);
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -62,8 +68,9 @@ const Index = () => {
   }, []);
 
   const handleSelectWorkout = (workout: Workout) => {
-    setSelectedWorkout(workout);
-    setWorkoutStep('customize');
+    // Skip customization - go directly to logging with full exercise list
+    setActiveWorkout(workout);
+    setWorkoutStep('logging');
   };
 
   const handleStartWorkout = (customizedWorkout: Workout) => {
@@ -191,6 +198,15 @@ const Index = () => {
                   programType={selectedProgram}
                   onSelectWorkout={handleSelectWorkout}
                   onCustomizeProgram={handleCustomizeProgram}
+                />
+              )}
+
+              {selectedCustomProgram && selectedCustomProgramDetails && (
+                <CustomProgramManager
+                  programId={selectedCustomProgram}
+                  programName={selectedCustomProgramDetails.name}
+                  onSelectWorkout={handleSelectWorkout}
+                  onBack={() => setSelectedCustomProgram(null)}
                 />
               )}
 

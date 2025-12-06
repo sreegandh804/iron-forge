@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Workout, ExerciseSet } from "@/types/workout";
+import { Workout, Exercise, ExerciseSet } from "@/types/workout";
 import { NeuCard } from "@/components/ui/neu-card";
 import { NeuButton } from "@/components/ui/neu-button";
 import { ArrowLeft, Plus, Check, Trash2, Loader2, Minus, Trophy } from "lucide-react";
@@ -9,6 +9,7 @@ import { WorkoutMuscleDisplay } from "@/components/MuscleBody/WorkoutMuscleDispl
 import { useLastWorkoutSets } from "@/hooks/useLastWorkoutSets";
 import { usePersonalRecords } from "@/hooks/usePersonalRecords";
 import { useAuth } from "@/hooks/useAuth";
+import { AddExerciseSheet } from "@/components/AddExerciseSheet";
 
 interface ExerciseLoggerProps {
   workout: Workout;
@@ -16,15 +17,31 @@ interface ExerciseLoggerProps {
   onWorkoutComplete?: () => void;
 }
 
-export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseLoggerProps) {
+export function ExerciseLogger({ workout: initialWorkout, onBack, onWorkoutComplete }: ExerciseLoggerProps) {
+  const [workout, setWorkout] = useState<Workout>(initialWorkout);
   const [sets, setSets] = useState<Record<string, ExerciseSet[]>>({});
   const [activeExercise, setActiveExercise] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [newPRs, setNewPRs] = useState<Set<string>>(new Set());
+  const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false);
 
   const { user } = useAuth();
   const { data: lastWorkoutSets } = useLastWorkoutSets();
   const { data: personalRecords } = usePersonalRecords();
+
+  const existingExerciseIds = useMemo(() => 
+    workout.exercises.map(ex => ex.id), 
+    [workout.exercises]
+  );
+
+  const handleAddExercise = (exercise: Exercise) => {
+    setWorkout(prev => ({
+      ...prev,
+      exercises: [...prev.exercises, exercise]
+    }));
+    setIsAddExerciseOpen(false);
+    toast.success(`Added ${exercise.name}`);
+  };
 
   // Calculate completed exercises (at least one completed set)
   const completedExerciseIds = useMemo(() => {
@@ -168,15 +185,28 @@ export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseL
 
   return (
     <section className="space-y-6 pb-24 lg:pb-6">
-      <div className="flex items-center gap-4">
-        <NeuButton variant="outline" size="icon" onClick={onBack} className="h-12 w-12">
-          <ArrowLeft className="h-5 w-5" />
-        </NeuButton>
-        <div>
-          <h2 className="text-2xl font-bold uppercase tracking-tight">{workout.title}</h2>
-          <p className="text-muted-foreground font-mono text-sm">{workout.description}</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <NeuButton variant="outline" size="icon" onClick={onBack} className="h-12 w-12">
+            <ArrowLeft className="h-5 w-5" />
+          </NeuButton>
+          <div>
+            <h2 className="text-2xl font-bold uppercase tracking-tight">{workout.title}</h2>
+            <p className="text-muted-foreground font-mono text-sm">{workout.description}</p>
+          </div>
         </div>
+        <NeuButton variant="secondary" onClick={() => setIsAddExerciseOpen(true)} className="h-12">
+          <Plus className="h-5 w-5 mr-2" />
+          Add Exercise
+        </NeuButton>
       </div>
+
+      <AddExerciseSheet
+        open={isAddExerciseOpen}
+        onOpenChange={setIsAddExerciseOpen}
+        onAddExercise={handleAddExercise}
+        existingExerciseIds={existingExerciseIds}
+      />
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Exercise List */}
