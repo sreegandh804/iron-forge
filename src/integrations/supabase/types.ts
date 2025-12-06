@@ -119,6 +119,7 @@ export type Database = {
           is_available: boolean | null
           is_default: boolean | null
           name: string
+          user_id: string | null
         }
         Insert: {
           category: string
@@ -127,6 +128,7 @@ export type Database = {
           is_available?: boolean | null
           is_default?: boolean | null
           name: string
+          user_id?: string | null
         }
         Update: {
           category?: string
@@ -135,6 +137,7 @@ export type Database = {
           is_available?: boolean | null
           is_default?: boolean | null
           name?: string
+          user_id?: string | null
         }
         Relationships: []
       }

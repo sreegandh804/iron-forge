@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Equipment, CustomExercise, MuscleGroup, BodyRegion } from "@/types/workout";
+import { useAuth } from "@/hooks/useAuth";
 
 export function useEquipment() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const query = useQuery({
     queryKey: ["equipment"],
@@ -80,11 +82,15 @@ export function useEquipment() {
 
   const addEquipment = useMutation({
     mutationFn: async (equipment: Omit<Equipment, "id" | "exercises">) => {
+      if (!user) throw new Error("Must be logged in to add equipment");
+      
       const { data, error } = await supabase
         .from("equipment")
         .insert({
           name: equipment.name,
           category: equipment.category,
+          user_id: user.id,
+          is_default: false,
         })
         .select()
         .single();
