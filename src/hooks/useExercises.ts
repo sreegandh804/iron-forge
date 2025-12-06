@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface AddExerciseInput {
   equipmentId: string;
@@ -11,9 +12,12 @@ interface AddExerciseInput {
 
 export function useExercises() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const addExercise = useMutation({
     mutationFn: async (input: AddExerciseInput) => {
+      if (!user) throw new Error("Must be logged in to add an exercise");
+
       // Insert the exercise
       const { data: exercise, error: exerciseError } = await supabase
         .from("custom_exercises")
@@ -21,6 +25,7 @@ export function useExercises() {
           equipment_id: input.equipmentId,
           name: input.name,
           description: input.description,
+          user_id: user.id,
         })
         .select()
         .single();
@@ -33,11 +38,13 @@ export function useExercises() {
           exercise_id: exercise.id,
           muscle_group_id: muscleGroupId,
           target_type: "primary" as const,
+          user_id: user.id,
         })),
         ...input.secondaryMuscleIds.map((muscleGroupId) => ({
           exercise_id: exercise.id,
           muscle_group_id: muscleGroupId,
           target_type: "secondary" as const,
+          user_id: user.id,
         })),
       ];
 
