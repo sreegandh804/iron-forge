@@ -217,39 +217,40 @@ export function WorkoutHistory() {
               className="cursor-pointer hover:bg-muted/30 transition-colors"
               onClick={() => handleViewDetails(log)}
             >
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="space-y-2 flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-bold">{log.workout_title}</h3>
-                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="text-lg font-bold truncate">{log.workout_title}</h3>
+                    <Eye className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   </div>
                   {log.workout_description && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground line-clamp-1">
                       {log.workout_description}
                     </p>
                   )}
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground font-mono">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground font-mono">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      {format(new Date(log.completed_at), "MMM d, yyyy 'at' h:mm a")}
+                      {format(new Date(log.completed_at), "MMM d, yyyy")}
                     </span>
                     <span className="uppercase bg-muted px-2 py-0.5 border border-border">
                       {log.program_type.replace("-", " ")}
                     </span>
                   </div>
                 </div>
-                <div className="text-right space-y-1">
-                  <div className="flex items-center gap-2 justify-end">
+                <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 sm:text-right">
+                  <div className="flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-primary" />
                     <span className="text-xl font-bold font-mono">
                       {log.total_volume.toLocaleString()}
                     </span>
+                    <span className="text-xs text-muted-foreground font-mono sm:hidden">kg</span>
                   </div>
-                  <p className="text-xs text-muted-foreground font-mono uppercase">
+                  <p className="hidden sm:block text-xs text-muted-foreground font-mono uppercase">
                     Total Volume (kg)
                   </p>
                   <p className="text-xs text-muted-foreground font-mono">
-                    {log.total_sets} sets completed
+                    {log.total_sets} sets
                   </p>
                 </div>
               </div>

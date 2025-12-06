@@ -15,7 +15,9 @@ import { WeightProgressionChart } from "@/components/Analytics/WeightProgression
 import { useWorkoutAnalytics } from "@/hooks/useWorkoutAnalytics";
 import { useEquipment } from "@/hooks/useEquipment";
 import { NeuCard } from "@/components/ui/neu-card";
-import { Dumbbell, TrendingUp } from "lucide-react";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { Dumbbell, TrendingUp, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 type WorkoutStep = 'browse' | 'customize' | 'logging';
 
@@ -26,6 +28,7 @@ const Index = () => {
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   const [workoutStep, setWorkoutStep] = useState<WorkoutStep>('browse');
   const [historyKey, setHistoryKey] = useState(0);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const { data: analyticsData, isLoading: analyticsLoading } = useWorkoutAnalytics(730);
   const { equipment } = useEquipment();
@@ -76,7 +79,7 @@ const Index = () => {
   // Customize screen
   if (workoutStep === 'customize' && selectedWorkout) {
     return (
-      <main className="min-h-screen bg-background">
+      <main className="min-h-screen bg-background pb-20 lg:pb-0">
         <div className="container max-w-6xl py-8 px-4">
           <WorkoutCustomizer
             workout={selectedWorkout}
@@ -84,6 +87,11 @@ const Index = () => {
             onStart={handleStartWorkout}
           />
         </div>
+        <MobileBottomNav 
+          onQuickWorkout={handleStartQuickWorkout}
+          onToggleSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          sidebarOpen={mobileSidebarOpen}
+        />
       </main>
     );
   }
@@ -91,7 +99,7 @@ const Index = () => {
   // Logging screen
   if (workoutStep === 'logging' && activeWorkout) {
     return (
-      <main className="min-h-screen bg-background">
+      <main className="min-h-screen bg-background pb-20 lg:pb-0">
         <div className="container max-w-6xl py-8 px-4">
           <ExerciseLogger 
             workout={activeWorkout} 
@@ -105,20 +113,20 @@ const Index = () => {
 
   return (
     <MuscleHighlightProvider>
-      <main className="min-h-screen bg-background">
+      <main className="min-h-screen bg-background pb-20 lg:pb-0">
         {/* Header */}
         <header className="border-b-4 border-border bg-secondary">
-          <div className="container max-w-6xl py-6 px-4">
+          <div className="container max-w-6xl py-4 sm:py-6 px-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="bg-primary text-primary-foreground p-3 border-2 border-border shadow-sm">
-                  <Dumbbell className="h-8 w-8" strokeWidth={2.5} />
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="bg-primary text-primary-foreground p-2 sm:p-3 border-2 border-border shadow-sm">
+                  <Dumbbell className="h-6 w-6 sm:h-8 sm:w-8" strokeWidth={2.5} />
                 </div>
                 <div>
-                  <h1 className="text-3xl md:text-4xl font-bold uppercase tracking-tight">
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold uppercase tracking-tight">
                     GymForge
                   </h1>
-                  <p className="text-muted-foreground font-mono text-sm">
+                  <p className="text-muted-foreground font-mono text-xs sm:text-sm">
                     Track • Train • Transform
                   </p>
                 </div>
@@ -129,17 +137,19 @@ const Index = () => {
         </header>
 
         {/* Main Content - Two Column Layout */}
-        <div className="container max-w-6xl py-8 px-4">
-          <div className="flex flex-col lg:flex-row gap-8">
+        <div className="container max-w-6xl py-6 sm:py-8 px-4">
+          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
             {/* Left Column - Main Content */}
-            <div className="flex-1 space-y-12">
-              <ProgramSelector
-                selectedProgram={selectedProgram}
-                onSelectProgram={setSelectedProgram}
-                selectedCustomProgram={selectedCustomProgram}
-                onSelectCustomProgram={setSelectedCustomProgram}
-                onStartQuickWorkout={handleStartQuickWorkout}
-              />
+            <div className="flex-1 space-y-8 sm:space-y-12">
+              <div id="programs-section">
+                <ProgramSelector
+                  selectedProgram={selectedProgram}
+                  onSelectProgram={setSelectedProgram}
+                  selectedCustomProgram={selectedCustomProgram}
+                  onSelectCustomProgram={setSelectedCustomProgram}
+                  onStartQuickWorkout={handleStartQuickWorkout}
+                />
+              </div>
 
               {selectedProgram && !selectedCustomProgram && (
                 <WorkoutList
@@ -151,19 +161,19 @@ const Index = () => {
               )}
 
               {/* Weight Progression Chart */}
-              <section className="space-y-6">
+              <section className="space-y-4 sm:space-y-6">
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-bold uppercase tracking-tight flex items-center gap-3">
-                    <TrendingUp className="h-6 w-6" />
+                  <h2 className="text-xl sm:text-2xl font-bold uppercase tracking-tight flex items-center gap-3">
+                    <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />
                     Weight Progression
                   </h2>
-                  <p className="text-muted-foreground font-mono text-sm">
+                  <p className="text-muted-foreground font-mono text-xs sm:text-sm">
                     Track your strength gains over time
                   </p>
                 </div>
-                <NeuCard variant="flat" className="p-4">
+                <NeuCard variant="flat" className="p-3 sm:p-4">
                   {analyticsLoading ? (
-                    <div className="h-[250px] flex items-center justify-center text-muted-foreground font-mono">
+                    <div className="h-[200px] sm:h-[250px] flex items-center justify-center text-muted-foreground font-mono">
                       Loading...
                     </div>
                   ) : (
@@ -172,14 +182,36 @@ const Index = () => {
                 </NeuCard>
               </section>
 
-              <WorkoutHistory key={historyKey} />
+              <div id="history-section">
+                <WorkoutHistory key={historyKey} />
+              </div>
 
-              <EquipmentManager />
+              <div id="equipment-section">
+                <EquipmentManager />
+              </div>
             </div>
 
             {/* Right Column - Activity Calendar & Muscle Status */}
+            {/* Mobile: Collapsible, Desktop: Always visible */}
             <div className="lg:w-72 lg:flex-shrink-0">
-              <div className="lg:sticky lg:top-8 space-y-6">
+              {/* Mobile Collapsible */}
+              <div className="lg:hidden">
+                <Collapsible open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+                  <CollapsibleTrigger className="w-full">
+                    <NeuCard variant="flat" className="flex items-center justify-between p-4">
+                      <span className="font-bold uppercase text-sm">Stats & Recovery</span>
+                      <ChevronDown className={`h-5 w-5 transition-transform ${mobileSidebarOpen ? 'rotate-180' : ''}`} />
+                    </NeuCard>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-4 mt-4">
+                    <WorkoutActivityCalendar />
+                    <MuscleBodyDiagram />
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+
+              {/* Desktop Sticky */}
+              <div className="hidden lg:block lg:sticky lg:top-8 space-y-6">
                 <WorkoutActivityCalendar />
                 <MuscleBodyDiagram />
               </div>
@@ -188,13 +220,20 @@ const Index = () => {
         </div>
 
         {/* Footer */}
-        <footer className="border-t-4 border-border bg-secondary mt-12">
+        <footer className="border-t-4 border-border bg-secondary mt-8 sm:mt-12 hidden lg:block">
           <div className="container max-w-6xl py-6 px-4">
             <p className="text-center text-muted-foreground font-mono text-xs uppercase">
               Built for gains • No excuses
             </p>
           </div>
         </footer>
+
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav 
+          onQuickWorkout={handleStartQuickWorkout}
+          onToggleSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          sidebarOpen={mobileSidebarOpen}
+        />
       </main>
     </MuscleHighlightProvider>
   );
