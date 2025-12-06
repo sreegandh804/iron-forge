@@ -2,11 +2,12 @@ import { useState, useMemo } from "react";
 import { Workout, ExerciseSet } from "@/types/workout";
 import { NeuCard } from "@/components/ui/neu-card";
 import { NeuButton } from "@/components/ui/neu-button";
-import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Check, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Check, Trash2, Loader2, Minus, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { WorkoutMuscleDisplay } from "@/components/MuscleBody/WorkoutMuscleDisplay";
+import { useLastWorkoutSets } from "@/hooks/useLastWorkoutSets";
+import { usePersonalRecords } from "@/hooks/usePersonalRecords";
 
 interface ExerciseLoggerProps {
   workout: Workout;
@@ -18,6 +19,10 @@ export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseL
   const [sets, setSets] = useState<Record<string, ExerciseSet[]>>({});
   const [activeExercise, setActiveExercise] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [newPRs, setNewPRs] = useState<Set<string>>(new Set());
+
+  const { data: lastWorkoutSets } = useLastWorkoutSets();
+  const { data: personalRecords, refetch: refetchPRs } = usePersonalRecords();
 
   // Calculate completed exercises (at least one completed set)
   const completedExerciseIds = useMemo(() => {
@@ -31,12 +36,17 @@ export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseL
 
   const addSet = (exerciseId: string) => {
     const exerciseSets = sets[exerciseId] || [];
+    const exercise = workout.exercises.find(e => e.id === exerciseId);
     const lastSet = exerciseSets[exerciseSets.length - 1];
+    
+    // Get last workout data for this exercise
+    const lastWorkout = lastWorkoutSets?.get(exercise?.name || '');
+    
     const newSet: ExerciseSet = {
       id: Date.now().toString(),
       exerciseId,
-      weight: lastSet?.weight || 0,
-      reps: lastSet?.reps || 10,
+      weight: lastSet?.weight || lastWorkout?.weight || 0,
+      reps: lastSet?.reps || lastWorkout?.reps || 10,
       completed: false,
     };
     setSets({
@@ -49,15 +59,38 @@ export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseL
     setSets({
       ...sets,
       [exerciseId]: (sets[exerciseId] || []).map((s) =>
-        s.id === setId ? { ...s, [field]: value } : s
+        s.id === setId ? { ...s, [field]: Math.max(0, value) } : s
       ),
     });
   };
 
+  const incrementValue = (exerciseId: string, setId: string, field: 'weight' | 'reps', increment: number) => {
+    const exerciseSets = sets[exerciseId] || [];
+    const currentSet = exerciseSets.find(s => s.id === setId);
+    if (currentSet) {
+      updateSet(exerciseId, setId, field, currentSet[field] + increment);
+    }
+  };
+
   const toggleComplete = (exerciseId: string, setId: string) => {
+    const exerciseSets = sets[exerciseId] || [];
+    const currentSet = exerciseSets.find(s => s.id === setId);
+    const exercise = workout.exercises.find(e => e.id === exerciseId);
+    
+    if (currentSet && !currentSet.completed && exercise) {
+      // Check for PR
+      const currentPR = personalRecords?.get(exercise.name);
+      if (currentPR && currentSet.weight > currentPR.max_weight) {
+        toast.success(`🏆 New PR: ${exercise.name} - ${currentSet.weight}kg!`, {
+          duration: 5000,
+        });
+        setNewPRs(prev => new Set(prev).add(exerciseId));
+      }
+    }
+
     setSets({
       ...sets,
-      [exerciseId]: (sets[exerciseId] || []).map((s) =>
+      [exerciseId]: exerciseSets.map((s) =>
         s.id === setId ? { ...s, completed: !s.completed } : s
       ),
     });
@@ -116,7 +149,9 @@ export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseL
       if (setsError) throw setsError;
 
       const totalVolume = completedSets.reduce((acc, s) => acc + s.weight * s.reps, 0);
-      toast.success(`Workout saved! ${completedSets.length} sets, ${totalVolume.toLocaleString()}kg total volume`);
+      const prCount = newPRs.size;
+      const prMessage = prCount > 0 ? ` 🏆 ${prCount} new PR${prCount > 1 ? 's' : ''}!` : '';
+      toast.success(`Workout saved! ${completedSets.length} sets, ${totalVolume.toLocaleString()}kg total volume${prMessage}`);
       onWorkoutComplete?.();
       onBack();
     } catch (error) {
@@ -128,9 +163,9 @@ export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseL
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 pb-24 lg:pb-6">
       <div className="flex items-center gap-4">
-        <NeuButton variant="outline" size="icon" onClick={onBack}>
+        <NeuButton variant="outline" size="icon" onClick={onBack} className="h-12 w-12">
           <ArrowLeft className="h-5 w-5" />
         </NeuButton>
         <div>
@@ -146,27 +181,37 @@ export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseL
             const exerciseSets = sets[exercise.id] || [];
             const isActive = activeExercise === exercise.id;
             const isCompleted = completedExerciseIds.includes(exercise.id);
+            const hasPR = newPRs.has(exercise.id);
+            const lastWorkout = lastWorkoutSets?.get(exercise.name);
             
             return (
               <NeuCard
                 key={exercise.id}
                 variant={isActive ? "pressed" : "raised"}
-                className={`cursor-pointer ${isCompleted ? 'border-accent' : ''}`}
+                className={`cursor-pointer ${isCompleted ? 'border-accent' : ''} ${hasPR ? 'ring-2 ring-yellow-500' : ''}`}
                 onClick={() => setActiveExercise(isActive ? null : exercise.id)}
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className={`w-8 h-8 flex items-center justify-center font-bold text-sm border-2 border-border ${
+                      <span className={`w-10 h-10 flex items-center justify-center font-bold text-sm border-2 border-border ${
                         isCompleted ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
                       }`}>
-                        {isCompleted ? <Check className="h-4 w-4" /> : index + 1}
+                        {isCompleted ? <Check className="h-5 w-5" /> : index + 1}
                       </span>
                       <div>
-                        <h3 className="font-bold text-lg">{exercise.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-lg">{exercise.name}</h3>
+                          {hasPR && <Trophy className="h-4 w-4 text-yellow-500" />}
+                        </div>
                         <p className="text-xs text-muted-foreground font-mono uppercase">
                           {exercise.muscleGroup}
                         </p>
+                        {lastWorkout && !isActive && (
+                          <p className="text-xs text-muted-foreground font-mono">
+                            Last: {lastWorkout.weight}kg × {lastWorkout.reps}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -178,55 +223,107 @@ export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseL
 
                   {isActive && (
                     <div className="space-y-3 pt-4 border-t-2 border-border" onClick={(e) => e.stopPropagation()}>
+                      {lastWorkout && (
+                        <div className="text-sm text-muted-foreground font-mono bg-muted/50 p-2 border border-border">
+                          Last workout: {lastWorkout.weight}kg × {lastWorkout.reps} reps
+                        </div>
+                      )}
+                      
                       {exerciseSets.map((set, setIndex) => (
                         <div
                           key={set.id}
-                          className={`flex items-center gap-3 p-3 border-2 border-border ${
+                          className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 border-2 border-border ${
                             set.completed ? 'bg-accent' : 'bg-background'
                           }`}
                         >
-                          <span className="font-mono text-sm w-8">#{setIndex + 1}</span>
-                          <div className="flex items-center gap-2 flex-1">
-                            <Input
-                              type="number"
-                              value={set.weight}
-                              onChange={(e) => updateSet(exercise.id, set.id, 'weight', Number(e.target.value))}
-                              className="w-20 h-10 text-center font-mono border-2 border-border"
-                            />
-                            <span className="text-xs text-muted-foreground font-mono">KG</span>
+                          <span className="font-mono text-sm w-full sm:w-8 text-center sm:text-left">#{setIndex + 1}</span>
+                          
+                          {/* Weight Input with +/- buttons */}
+                          <div className="flex items-center gap-1 flex-1">
+                            <NeuButton
+                              variant="outline"
+                              size="icon"
+                              className="h-12 w-12 flex-shrink-0"
+                              onClick={() => incrementValue(exercise.id, set.id, 'weight', -2.5)}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </NeuButton>
+                            <div className="flex-1 text-center">
+                              <input
+                                type="number"
+                                inputMode="decimal"
+                                value={set.weight}
+                                onChange={(e) => updateSet(exercise.id, set.id, 'weight', Number(e.target.value))}
+                                className="w-full h-12 text-center font-mono text-lg border-2 border-border bg-background"
+                              />
+                              <span className="text-xs text-muted-foreground font-mono">KG</span>
+                            </div>
+                            <NeuButton
+                              variant="outline"
+                              size="icon"
+                              className="h-12 w-12 flex-shrink-0"
+                              onClick={() => incrementValue(exercise.id, set.id, 'weight', 2.5)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </NeuButton>
                           </div>
-                          <div className="flex items-center gap-2 flex-1">
-                            <Input
-                              type="number"
-                              value={set.reps}
-                              onChange={(e) => updateSet(exercise.id, set.id, 'reps', Number(e.target.value))}
-                              className="w-20 h-10 text-center font-mono border-2 border-border"
-                            />
-                            <span className="text-xs text-muted-foreground font-mono">REPS</span>
+                          
+                          {/* Reps Input with +/- buttons */}
+                          <div className="flex items-center gap-1 flex-1">
+                            <NeuButton
+                              variant="outline"
+                              size="icon"
+                              className="h-12 w-12 flex-shrink-0"
+                              onClick={() => incrementValue(exercise.id, set.id, 'reps', -1)}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </NeuButton>
+                            <div className="flex-1 text-center">
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                value={set.reps}
+                                onChange={(e) => updateSet(exercise.id, set.id, 'reps', Number(e.target.value))}
+                                className="w-full h-12 text-center font-mono text-lg border-2 border-border bg-background"
+                              />
+                              <span className="text-xs text-muted-foreground font-mono">REPS</span>
+                            </div>
+                            <NeuButton
+                              variant="outline"
+                              size="icon"
+                              className="h-12 w-12 flex-shrink-0"
+                              onClick={() => incrementValue(exercise.id, set.id, 'reps', 1)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </NeuButton>
                           </div>
-                          <NeuButton
-                            variant={set.completed ? "default" : "outline"}
-                            size="icon"
-                            className="h-10 w-10"
-                            onClick={() => toggleComplete(exercise.id, set.id)}
-                          >
-                            <Check className="h-4 w-4" />
-                          </NeuButton>
-                          <button
-                            onClick={() => removeSet(exercise.id, set.id)}
-                            className="p-2 text-muted-foreground hover:text-destructive transition-colors"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          
+                          {/* Action buttons */}
+                          <div className="flex gap-2 justify-end">
+                            <NeuButton
+                              variant={set.completed ? "default" : "outline"}
+                              size="icon"
+                              className="h-12 w-12"
+                              onClick={() => toggleComplete(exercise.id, set.id)}
+                            >
+                              <Check className="h-5 w-5" />
+                            </NeuButton>
+                            <button
+                              onClick={() => removeSet(exercise.id, set.id)}
+                              className="p-3 text-muted-foreground hover:text-destructive transition-colors"
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                       <NeuButton
                         variant="secondary"
-                        size="sm"
-                        className="w-full"
+                        size="lg"
+                        className="w-full h-12"
                         onClick={() => addSet(exercise.id)}
                       >
-                        <Plus className="h-4 w-4 mr-2" />
+                        <Plus className="h-5 w-5 mr-2" />
                         Add Set
                       </NeuButton>
                     </div>
@@ -236,14 +333,14 @@ export function ExerciseLogger({ workout, onBack, onWorkoutComplete }: ExerciseL
             );
           })}
 
-          <NeuButton variant="default" size="lg" className="w-full" onClick={finishWorkout} disabled={saving}>
+          <NeuButton variant="default" size="lg" className="w-full h-14" onClick={finishWorkout} disabled={saving}>
             {saving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Check className="h-5 w-5 mr-2" />}
             {saving ? "Saving..." : "Finish Workout"}
           </NeuButton>
         </div>
 
-        {/* Muscle Diagram Sidebar */}
-        <div className="lg:w-72 lg:flex-shrink-0">
+        {/* Muscle Diagram Sidebar - Hidden on mobile */}
+        <div className="hidden lg:block lg:w-72 lg:flex-shrink-0">
           <div className="lg:sticky lg:top-8">
             <WorkoutMuscleDisplay
               exercises={workout.exercises}

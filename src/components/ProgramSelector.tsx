@@ -65,16 +65,17 @@ export function ProgramSelector({
 
   return (
     <section className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-2">
           <h2 className="text-2xl font-bold uppercase tracking-tight">Select Program</h2>
           <p className="text-muted-foreground font-mono text-sm">Choose your training split</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <NeuButton
             variant="default"
             size="sm"
             onClick={onStartQuickWorkout}
+            className="w-full sm:w-auto"
           >
             <Zap className="h-4 w-4 mr-2" />
             Quick Workout
@@ -82,7 +83,7 @@ export function ProgramSelector({
           <Button
             variant="outline"
             size="sm"
-            className="gap-2 border-2"
+            className="gap-2 border-2 w-full sm:w-auto"
             onClick={() => setCreateSheetOpen(true)}
           >
             <Plus className="h-4 w-4" />
