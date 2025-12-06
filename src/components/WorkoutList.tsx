@@ -1,14 +1,13 @@
 import { Workout, ProgramType } from "@/types/workout";
 import { NeuCard } from "@/components/ui/neu-card";
 import { NeuButton } from "@/components/ui/neu-button";
-import { ChevronRight, Target, AlertCircle } from "lucide-react";
-import { useMemo } from "react";
+import { ChevronRight, Target, Settings } from "lucide-react";
 
 interface WorkoutListProps {
   workouts: Workout[];
   programType: ProgramType;
   onSelectWorkout: (workout: Workout) => void;
-  availableEquipmentIds?: string[];
+  onCustomizeProgram?: () => void;
 }
 
 const programColors: Record<ProgramType, string> = {
@@ -18,39 +17,36 @@ const programColors: Record<ProgramType, string> = {
   'custom': 'border-l-primary',
 };
 
-export function WorkoutList({ workouts, programType, onSelectWorkout, availableEquipmentIds }: WorkoutListProps) {
+export function WorkoutList({ workouts, programType, onSelectWorkout, onCustomizeProgram }: WorkoutListProps) {
   const filteredWorkouts = workouts.filter((w) => w.programType === programType);
 
   return (
     <section className="space-y-6">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-bold uppercase tracking-tight">Recommended Workouts</h2>
-        <p className="text-muted-foreground font-mono text-sm">
-          {filteredWorkouts.length} workouts in your program
-        </p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold uppercase tracking-tight">Recommended Workouts</h2>
+          <p className="text-muted-foreground font-mono text-sm">
+            {filteredWorkouts.length} workouts in your program
+          </p>
+        </div>
+        {onCustomizeProgram && (
+          <NeuButton variant="outline" size="sm" onClick={onCustomizeProgram}>
+            <Settings className="h-4 w-4 mr-2" />
+            Customize
+          </NeuButton>
+        )}
       </div>
 
       <div className="space-y-4">
         {filteredWorkouts.map((workout) => {
-          // Filter exercises by available equipment
-          const availableExercises = availableEquipmentIds
-            ? workout.exercises.filter(ex => !ex.equipmentId || availableEquipmentIds.includes(ex.equipmentId))
-            : workout.exercises;
-          
-          const unavailableCount = workout.exercises.length - availableExercises.length;
-          
-          // Create a modified workout with only available exercises
-          const displayWorkout: Workout = {
-            ...workout,
-            exercises: availableExercises,
-          };
+          const isCustomized = 'isCustomized' in workout && workout.isCustomized;
           
           return (
             <NeuCard
               key={workout.id}
               variant="raised"
               className={`border-l-8 ${programColors[programType]} cursor-pointer`}
-              onClick={() => onSelectWorkout(displayWorkout)}
+              onClick={() => onSelectWorkout(workout)}
             >
               <div className="flex items-center justify-between">
                 <div className="space-y-2">
@@ -61,21 +57,20 @@ export function WorkoutList({ workouts, programType, onSelectWorkout, availableE
                       </span>
                     )}
                     <h3 className="text-xl font-bold">{workout.title}</h3>
+                    {isCustomized && (
+                      <span className="bg-accent text-accent-foreground px-2 py-1 text-xs font-bold uppercase">
+                        Customized
+                      </span>
+                    )}
                   </div>
                   <p className="text-muted-foreground text-sm">{workout.description}</p>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground font-mono">
                     <span className="flex items-center gap-1">
                       <Target className="h-3 w-3" />
-                      {availableExercises.length} exercises
+                      {workout.exercises.length} exercises
                     </span>
-                    {unavailableCount > 0 && (
-                      <span className="flex items-center gap-1 text-amber-500">
-                        <AlertCircle className="h-3 w-3" />
-                        {unavailableCount} skipped (no equipment)
-                      </span>
-                    )}
                     <span>
-                      {[...new Set(availableExercises.map(e => e.muscleGroup))].join(' • ')}
+                      {[...new Set(workout.exercises.map(e => e.muscleGroup))].join(' • ')}
                     </span>
                   </div>
                 </div>

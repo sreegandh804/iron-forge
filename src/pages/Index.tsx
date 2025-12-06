@@ -1,6 +1,5 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { ProgramType, Workout } from "@/types/workout";
-import { workoutPrograms } from "@/data/workouts";
 import { ProgramSelector } from "@/components/ProgramSelector";
 import { EquipmentManager } from "@/components/EquipmentManager";
 import { WorkoutList } from "@/components/WorkoutList";
@@ -12,8 +11,9 @@ import { MuscleHighlightProvider } from "@/context/MuscleHighlightContext";
 import { WorkoutCustomizer } from "@/components/WorkoutCustomizer";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WeightProgressionChart } from "@/components/Analytics/WeightProgressionChart";
+import { ProgramExerciseCustomizer } from "@/components/ProgramExerciseCustomizer";
 import { useWorkoutAnalytics } from "@/hooks/useWorkoutAnalytics";
-import { useEquipment } from "@/hooks/useEquipment";
+import { useWorkoutTemplates } from "@/hooks/useWorkoutTemplates";
 import { useAuth } from "@/hooks/useAuth";
 import { NeuCard } from "@/components/ui/neu-card";
 import { NeuButton } from "@/components/ui/neu-button";
@@ -22,7 +22,7 @@ import { Dumbbell, TrendingUp, ChevronDown, LogOut } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 
-type WorkoutStep = 'browse' | 'customize' | 'logging';
+type WorkoutStep = 'browse' | 'customize' | 'logging' | 'customize-program';
 
 const Index = () => {
   const [selectedProgram, setSelectedProgram] = useState<ProgramType | null>(null);
@@ -34,7 +34,7 @@ const Index = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const { data: analyticsData, isLoading: analyticsLoading } = useWorkoutAnalytics(730);
-  const { equipment } = useEquipment();
+  const { workouts: templateWorkouts, isLoading: templatesLoading } = useWorkoutTemplates(selectedProgram);
   const { user, signOut } = useAuth();
 
   const handleSignOut = async () => {
@@ -43,11 +43,6 @@ const Index = () => {
       toast.error('Failed to sign out');
     }
   };
-
-  // Get IDs of available equipment
-  const availableEquipmentIds = useMemo(() => {
-    return equipment.filter(eq => eq.isAvailable).map(eq => eq.id);
-  }, [equipment]);
 
   // Handle Quick Workout - start with empty exercise list
   const handleStartQuickWorkout = () => {
@@ -87,6 +82,25 @@ const Index = () => {
     setWorkoutStep('browse');
   };
 
+  // Program exercise customization screen
+  if (workoutStep === 'customize-program' && selectedProgram) {
+    return (
+      <main className="min-h-screen bg-background pb-20 lg:pb-0">
+        <div className="container max-w-6xl py-8 px-4">
+          <ProgramExerciseCustomizer
+            programType={selectedProgram}
+            onBack={() => setWorkoutStep('browse')}
+          />
+        </div>
+        <MobileBottomNav 
+          onQuickWorkout={handleStartQuickWorkout}
+          onToggleSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          sidebarOpen={mobileSidebarOpen}
+        />
+      </main>
+    );
+  }
+
   // Customize screen
   if (workoutStep === 'customize' && selectedWorkout) {
     return (
@@ -121,6 +135,10 @@ const Index = () => {
       </main>
     );
   }
+
+  const handleCustomizeProgram = () => {
+    setWorkoutStep('customize-program');
+  };
 
   return (
     <MuscleHighlightProvider>
@@ -169,10 +187,10 @@ const Index = () => {
 
               {selectedProgram && !selectedCustomProgram && (
                 <WorkoutList
-                  workouts={workoutPrograms}
+                  workouts={templateWorkouts}
                   programType={selectedProgram}
                   onSelectWorkout={handleSelectWorkout}
-                  availableEquipmentIds={availableEquipmentIds}
+                  onCustomizeProgram={handleCustomizeProgram}
                 />
               )}
 
