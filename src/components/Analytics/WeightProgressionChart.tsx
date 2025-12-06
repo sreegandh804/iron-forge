@@ -8,6 +8,7 @@ interface WeightProgressionChartProps {
 }
 
 type TimeRange = '1M' | '3M' | '6M' | 'YTD' | 'ALL';
+type ViewMode = 'exercise' | 'muscle';
 
 const TIME_RANGES: { key: TimeRange; label: string }[] = [
   { key: '1M', label: '1M' },
@@ -25,7 +26,9 @@ const generateColor = (index: number, total: number) => {
 
 export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>('YTD');
+  const [viewMode, setViewMode] = useState<ViewMode>('exercise');
   const [selectedExercises, setSelectedExercises] = useState<string[]>([]);
+  const [selectedMuscles, setSelectedMuscles] = useState<string[]>([]);
 
   // Filter data by time range
   const filteredData = useMemo(() => {
@@ -50,6 +53,11 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
     return [...new Set(filteredData.map(d => d.exercise))];
   }, [filteredData]);
 
+  // Get unique muscle groups from filtered data
+  const muscleGroups = useMemo(() => {
+    return [...new Set(filteredData.map(d => d.muscleGroup))];
+  }, [filteredData]);
+
   // Initialize selected exercises when data loads - select all by default
   useEffect(() => {
     if (exercises.length > 0 && selectedExercises.length === 0) {
@@ -57,8 +65,15 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
     }
   }, [exercises]);
 
-  // Transform data for chart
-  const chartData = useMemo(() => {
+  // Initialize selected muscles when data loads - select all by default
+  useEffect(() => {
+    if (muscleGroups.length > 0 && selectedMuscles.length === 0) {
+      setSelectedMuscles(muscleGroups);
+    }
+  }, [muscleGroups]);
+
+  // Transform data for chart - by exercise
+  const chartDataByExercise = useMemo(() => {
     const dateMap: Record<string, Record<string, number>> = {};
     
     filteredData.forEach(d => {
@@ -79,11 +94,46 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [filteredData, selectedExercises]);
 
+  // Transform data for chart - by muscle group (aggregate max weight per muscle per date)
+  const chartDataByMuscle = useMemo(() => {
+    const dateMap: Record<string, Record<string, number>> = {};
+    
+    filteredData.forEach(d => {
+      if (!selectedMuscles.includes(d.muscleGroup)) return;
+      
+      if (!dateMap[d.date]) {
+        dateMap[d.date] = {};
+      }
+      // Take max weight across all exercises for this muscle on this date
+      const currentMax = dateMap[d.date][d.muscleGroup] || 0;
+      dateMap[d.date][d.muscleGroup] = Math.max(currentMax, d.maxWeight);
+    });
+
+    return Object.entries(dateMap)
+      .map(([date, muscles]) => ({
+        date,
+        formattedDate: format(parseISO(date), 'MMM d'),
+        ...muscles,
+      }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [filteredData, selectedMuscles]);
+
+  const chartData = viewMode === 'exercise' ? chartDataByExercise : chartDataByMuscle;
+  const selectedItems = viewMode === 'exercise' ? selectedExercises : selectedMuscles;
+
   const toggleExercise = (exercise: string) => {
     setSelectedExercises(prev =>
       prev.includes(exercise)
         ? prev.filter(e => e !== exercise)
         : [...prev, exercise]
+    );
+  };
+
+  const toggleMuscle = (muscle: string) => {
+    setSelectedMuscles(prev =>
+      prev.includes(muscle)
+        ? prev.filter(m => m !== muscle)
+        : [...prev, muscle]
     );
   };
 
@@ -97,6 +147,30 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
 
   return (
     <div className="space-y-4">
+      {/* View Mode Toggle */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setViewMode('exercise')}
+          className={`px-3 py-1 text-xs font-mono font-bold border-2 border-border transition-all ${
+            viewMode === 'exercise'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+          }`}
+        >
+          By Exercise
+        </button>
+        <button
+          onClick={() => setViewMode('muscle')}
+          className={`px-3 py-1 text-xs font-mono font-bold border-2 border-border transition-all ${
+            viewMode === 'muscle'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+          }`}
+        >
+          By Muscle
+        </button>
+      </div>
+
       {/* Time Range Filter */}
       <div className="flex flex-wrap gap-2">
         {TIME_RANGES.map(({ key, label }) => (
@@ -114,21 +188,37 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
         ))}
       </div>
 
-      {/* Exercise Filter */}
+      {/* Exercise/Muscle Filter */}
       <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto pr-2">
-        {exercises.map((exercise) => (
-          <button
-            key={exercise}
-            onClick={() => toggleExercise(exercise)}
-            className={`px-2 py-1 text-xs font-mono border-2 border-border transition-all ${
-              selectedExercises.includes(exercise)
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted/50 text-muted-foreground'
-            }`}
-          >
-            {exercise}
-          </button>
-        ))}
+        {viewMode === 'exercise' ? (
+          exercises.map((exercise) => (
+            <button
+              key={exercise}
+              onClick={() => toggleExercise(exercise)}
+              className={`px-2 py-1 text-xs font-mono border-2 border-border transition-all ${
+                selectedExercises.includes(exercise)
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted/50 text-muted-foreground'
+              }`}
+            >
+              {exercise}
+            </button>
+          ))
+        ) : (
+          muscleGroups.map((muscle) => (
+            <button
+              key={muscle}
+              onClick={() => toggleMuscle(muscle)}
+              className={`px-2 py-1 text-xs font-mono border-2 border-border transition-all ${
+                selectedMuscles.includes(muscle)
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted/50 text-muted-foreground'
+              }`}
+            >
+              {muscle}
+            </button>
+          ))
+        )}
       </div>
 
       {/* Chart */}
@@ -153,14 +243,14 @@ export function WeightProgressionChart({ data }: WeightProgressionChartProps) {
                 borderRadius: 0,
               }}
             />
-            {selectedExercises.map((exercise, idx) => (
+            {selectedItems.map((item, idx) => (
               <Line
-                key={exercise}
+                key={item}
                 type="monotone"
-                dataKey={exercise}
-                stroke={generateColor(idx, selectedExercises.length)}
+                dataKey={item}
+                stroke={generateColor(idx, selectedItems.length)}
                 strokeWidth={2}
-                dot={{ fill: generateColor(idx, selectedExercises.length), strokeWidth: 0, r: 3 }}
+                dot={{ fill: generateColor(idx, selectedItems.length), strokeWidth: 0, r: 3 }}
                 connectNulls
               />
             ))}
