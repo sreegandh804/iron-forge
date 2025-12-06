@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Workout, Exercise, ExerciseSet } from "@/types/workout";
 import { NeuCard } from "@/components/ui/neu-card";
 import { NeuButton } from "@/components/ui/neu-button";
-import { ArrowLeft, Plus, Check, Trash2, Loader2, Minus, Trophy } from "lucide-react";
+import { ArrowLeft, Plus, Check, Trash2, Loader2, Minus, Trophy, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { WorkoutMuscleDisplay } from "@/components/MuscleBody/WorkoutMuscleDisplay";
@@ -41,6 +41,23 @@ export function ExerciseLogger({ workout: initialWorkout, onBack, onWorkoutCompl
     }));
     setIsAddExerciseOpen(false);
     toast.success(`Added ${exercise.name}`);
+  };
+
+  const handleRemoveExercise = (exerciseId: string) => {
+    const exercise = workout.exercises.find(ex => ex.id === exerciseId);
+    setWorkout(prev => ({
+      ...prev,
+      exercises: prev.exercises.filter(ex => ex.id !== exerciseId)
+    }));
+    // Remove any sets logged for this exercise
+    setSets(prev => {
+      const { [exerciseId]: _, ...rest } = prev;
+      return rest;
+    });
+    if (activeExercise === exerciseId) {
+      setActiveExercise(null);
+    }
+    toast.info(`Skipped ${exercise?.name || 'exercise'}`);
   };
 
   // Calculate completed exercises (at least one completed set)
@@ -252,6 +269,16 @@ export function ExerciseLogger({ workout: initialWorkout, onBack, onWorkoutCompl
                       <span className="text-sm font-mono text-muted-foreground">
                         {exerciseSets.filter(s => s.completed).length}/{exerciseSets.length} sets
                       </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveExercise(exercise.id);
+                        }}
+                        className="p-2 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Skip exercise"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
                     </div>
                   </div>
 
