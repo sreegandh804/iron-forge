@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface CustomProgram {
   id: string;
@@ -23,6 +24,7 @@ export interface CustomProgramWorkout {
 
 export const useCustomPrograms = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const programsQuery = useQuery({
     queryKey: ['custom-programs'],
@@ -39,9 +41,14 @@ export const useCustomPrograms = () => {
 
   const createProgram = useMutation({
     mutationFn: async (program: { name: string; description?: string; days_per_week: number }) => {
+      if (!user) throw new Error("Must be logged in to create a program");
+      
       const { data, error } = await supabase
         .from('custom_programs')
-        .insert(program)
+        .insert({
+          ...program,
+          user_id: user.id,
+        })
         .select()
         .single();
 
@@ -85,6 +92,7 @@ export const useCustomPrograms = () => {
 
 export const useCustomProgramWorkouts = (programId: string | null) => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const workoutsQuery = useQuery({
     queryKey: ['custom-program-workouts', programId],
@@ -111,9 +119,14 @@ export const useCustomProgramWorkouts = (programId: string | null) => {
       day_label?: string;
       exercises: any[];
     }) => {
+      if (!user) throw new Error("Must be logged in to create a workout");
+      
       const { data, error } = await supabase
         .from('custom_program_workouts')
-        .insert(workout)
+        .insert({
+          ...workout,
+          user_id: user.id,
+        })
         .select()
         .single();
 

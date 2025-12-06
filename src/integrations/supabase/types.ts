@@ -21,6 +21,7 @@ export type Database = {
           equipment_id: string
           id: string
           name: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -28,6 +29,7 @@ export type Database = {
           equipment_id: string
           id?: string
           name: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -35,6 +37,7 @@ export type Database = {
           equipment_id?: string
           id?: string
           name?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -56,6 +59,7 @@ export type Database = {
           program_id: string
           sort_order: number | null
           title: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -66,6 +70,7 @@ export type Database = {
           program_id: string
           sort_order?: number | null
           title: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -76,6 +81,7 @@ export type Database = {
           program_id?: string
           sort_order?: number | null
           title?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -94,6 +100,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -101,6 +108,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -108,6 +116,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -147,18 +156,21 @@ export type Database = {
           id: string
           muscle_group_id: string
           target_type: string
+          user_id: string | null
         }
         Insert: {
           exercise_id: string
           id?: string
           muscle_group_id: string
           target_type: string
+          user_id?: string | null
         }
         Update: {
           exercise_id?: string
           id?: string
           muscle_group_id?: string
           target_type?: string
+          user_id?: string | null
         }
         Relationships: [
           {
