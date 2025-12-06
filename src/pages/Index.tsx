@@ -227,7 +227,10 @@ const Index = () => {
                       Loading...
                     </div>
                   ) : (
-                    <WeightProgressionChart data={analyticsData?.weightProgression || []} />
+                    <WeightProgressionChart 
+                      data={analyticsData?.weightProgression || []} 
+                      volumeData={analyticsData?.volumeByWeek || []}
+                    />
                   )}
                 </NeuCard>
               </section>
