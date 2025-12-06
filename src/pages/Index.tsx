@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ProgramType, Workout } from "@/types/workout";
 import { workoutPrograms } from "@/data/workouts";
 import { ProgramSelector } from "@/components/ProgramSelector";
@@ -13,6 +13,7 @@ import { WorkoutCustomizer } from "@/components/WorkoutCustomizer";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WeightProgressionChart } from "@/components/Analytics/WeightProgressionChart";
 import { useWorkoutAnalytics } from "@/hooks/useWorkoutAnalytics";
+import { useEquipment } from "@/hooks/useEquipment";
 import { NeuCard } from "@/components/ui/neu-card";
 import { Dumbbell, TrendingUp } from "lucide-react";
 
@@ -27,6 +28,25 @@ const Index = () => {
   const [historyKey, setHistoryKey] = useState(0);
 
   const { data: analyticsData, isLoading: analyticsLoading } = useWorkoutAnalytics(730);
+  const { equipment } = useEquipment();
+
+  // Get IDs of available equipment
+  const availableEquipmentIds = useMemo(() => {
+    return equipment.filter(eq => eq.isAvailable).map(eq => eq.id);
+  }, [equipment]);
+
+  // Handle Quick Workout - start with empty exercise list
+  const handleStartQuickWorkout = () => {
+    const quickWorkout: Workout = {
+      id: 'quick-workout-' + Date.now(),
+      title: 'Quick Workout',
+      description: 'Custom workout session',
+      programType: 'custom',
+      exercises: [],
+    };
+    setSelectedWorkout(quickWorkout);
+    setWorkoutStep('customize');
+  };
 
   const handleWorkoutComplete = useCallback(() => {
     setHistoryKey((k) => k + 1);
@@ -118,6 +138,7 @@ const Index = () => {
                 onSelectProgram={setSelectedProgram}
                 selectedCustomProgram={selectedCustomProgram}
                 onSelectCustomProgram={setSelectedCustomProgram}
+                onStartQuickWorkout={handleStartQuickWorkout}
               />
 
               {selectedProgram && !selectedCustomProgram && (
@@ -125,6 +146,7 @@ const Index = () => {
                   workouts={workoutPrograms}
                   programType={selectedProgram}
                   onSelectWorkout={handleSelectWorkout}
+                  availableEquipmentIds={availableEquipmentIds}
                 />
               )}
 

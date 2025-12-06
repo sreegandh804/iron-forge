@@ -23,53 +23,21 @@ export function WorkoutActivityCalendar() {
   const { data: workoutDates, isLoading } = useWorkoutDates();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const { currentStreak, bestStreak, workoutDaysSet } = useMemo(() => {
+  const workoutDaysSet = useMemo(() => {
     if (!workoutDates || workoutDates.size === 0) {
-      return { currentStreak: 0, bestStreak: 0, workoutDaysSet: new Set<string>() };
+      return new Set<string>();
     }
-
-    // Create a set of workout day strings for quick lookup
-    const daysSet = new Set(workoutDates.keys());
-
-    // Calculate current streak
-    let current = 0;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = format(yesterday, 'yyyy-MM-dd');
-    
-    if (daysSet.has(todayStr) || daysSet.has(yesterdayStr)) {
-      let checkDate = daysSet.has(todayStr) ? today : yesterday;
-      while (daysSet.has(format(checkDate, 'yyyy-MM-dd'))) {
-        current++;
-        checkDate = new Date(checkDate);
-        checkDate.setDate(checkDate.getDate() - 1);
-      }
-    }
-
-    // Calculate best streak
-    const allDates = [...daysSet].sort();
-    let tempStreak = 1;
-    let best = allDates.length > 0 ? 1 : 0;
-    
-    for (let i = 1; i < allDates.length; i++) {
-      const prevDate = new Date(allDates[i - 1]);
-      const currDate = new Date(allDates[i]);
-      const diffDays = Math.round((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (diffDays === 1) {
-        tempStreak++;
-        best = Math.max(best, tempStreak);
-      } else {
-        tempStreak = 1;
-      }
-    }
-
-    return { currentStreak: current, bestStreak: best, workoutDaysSet: daysSet };
+    return new Set(workoutDates.keys());
   }, [workoutDates]);
+
+  // Calculate days worked in the currently displayed month
+  const daysWorkedThisMonth = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    
+    return days.filter(day => workoutDaysSet.has(format(day, 'yyyy-MM-dd'))).length;
+  }, [currentMonth, workoutDaysSet]);
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);
@@ -109,16 +77,10 @@ export function WorkoutActivityCalendar() {
         <span className="font-mono text-sm font-bold tracking-wider uppercase">Activity</span>
       </div>
 
-      {/* Streak Stats */}
-      <div className="flex gap-4 mb-4 text-xs font-mono">
-        <div>
-          <span className="text-muted-foreground">Current: </span>
-          <span className="font-bold">{currentStreak} days</span>
-        </div>
-        <div>
-          <span className="text-muted-foreground">Best: </span>
-          <span className="font-bold">{bestStreak} days</span>
-        </div>
+      {/* Days This Month */}
+      <div className="mb-4 text-xs font-mono">
+        <span className="text-muted-foreground">This month: </span>
+        <span className="font-bold">{daysWorkedThisMonth} days</span>
       </div>
 
       {/* Month Navigation */}

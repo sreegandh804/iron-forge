@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { ProgramType } from "@/types/workout";
 import { NeuCard } from "@/components/ui/neu-card";
-import { Dumbbell, Repeat, ArrowUpDown, Plus, Trash2, User } from "lucide-react";
+import { Dumbbell, Repeat, ArrowUpDown, Plus, Trash2, User, Zap } from "lucide-react";
 import { useCustomPrograms, CustomProgram } from "@/hooks/useCustomPrograms";
 import { CreateProgramSheet } from "./CreateProgramSheet";
 import { Button } from "@/components/ui/button";
+import { NeuButton } from "@/components/ui/neu-button";
 
 interface ProgramSelectorProps {
   selectedProgram: ProgramType | null;
   onSelectProgram: (program: ProgramType) => void;
   selectedCustomProgram?: string | null;
   onSelectCustomProgram?: (programId: string) => void;
+  onStartQuickWorkout?: () => void;
 }
 
 const defaultPrograms = [
@@ -41,7 +43,8 @@ export function ProgramSelector({
   selectedProgram, 
   onSelectProgram,
   selectedCustomProgram,
-  onSelectCustomProgram 
+  onSelectCustomProgram,
+  onStartQuickWorkout
 }: ProgramSelectorProps) {
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const { programs: customPrograms, deleteProgram, isLoading } = useCustomPrograms();
@@ -67,15 +70,25 @@ export function ProgramSelector({
           <h2 className="text-2xl font-bold uppercase tracking-tight">Select Program</h2>
           <p className="text-muted-foreground font-mono text-sm">Choose your training split</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2 border-2"
-          onClick={() => setCreateSheetOpen(true)}
-        >
-          <Plus className="h-4 w-4" />
-          Create Program
-        </Button>
+        <div className="flex gap-2">
+          <NeuButton
+            variant="default"
+            size="sm"
+            onClick={onStartQuickWorkout}
+          >
+            <Zap className="h-4 w-4 mr-2" />
+            Quick Workout
+          </NeuButton>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 border-2"
+            onClick={() => setCreateSheetOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            Create Program
+          </Button>
+        </div>
       </div>
       
       {/* Default Programs */}
