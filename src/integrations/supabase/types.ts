@@ -189,6 +189,41 @@ export type Database = {
           },
         ]
       }
+      exercise_set_muscles: {
+        Row: {
+          created_at: string
+          exercise_set_id: string
+          id: string
+          muscle_group: string
+          target_type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          exercise_set_id: string
+          id?: string
+          muscle_group: string
+          target_type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          exercise_set_id?: string
+          id?: string
+          muscle_group?: string
+          target_type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_set_muscles_exercise_set_id_fkey"
+            columns: ["exercise_set_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_sets: {
         Row: {
           created_at: string

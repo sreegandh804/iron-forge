@@ -26,11 +26,17 @@ export interface Equipment {
   isDefault?: boolean;
 }
 
+export interface MuscleTarget {
+  name: string;
+  type: 'primary' | 'secondary';
+}
+
 export interface Exercise {
   id: string;
   name: string;
   equipmentId?: string;
-  muscleGroup: string;
+  muscleGroup: string; // Keep for backward compatibility (primary muscle)
+  muscleTargets?: MuscleTarget[]; // All muscle targets (primary + secondary)
 }
 
 export interface ExerciseSet {
