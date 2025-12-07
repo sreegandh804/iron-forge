@@ -463,7 +463,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_muscle_last_worked: {
+        Args: never
+        Returns: {
+          last_worked: string
+          muscle_group: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
