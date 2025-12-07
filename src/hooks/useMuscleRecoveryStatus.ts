@@ -24,26 +24,16 @@ export const useMuscleRecoveryStatus = () => {
 
       if (muscleError) throw muscleError;
 
-      // Fetch the most recent workout for each muscle group from junction table
-      const { data: recentMuscles, error: musclesError } = await supabase
-        .from('exercise_set_muscles')
-        .select(`
-          muscle_group,
-          exercise_sets!inner(
-            workout_logs!inner(completed_at)
-          )
-        `)
-        .order('created_at', { ascending: false });
+      // Use RPC function to get accurate last worked dates per muscle
+      const { data: muscleLastWorkedData, error: rpcError } = await supabase
+        .rpc('get_muscle_last_worked');
 
-      if (musclesError) throw musclesError;
+      if (rpcError) throw rpcError;
 
-      // Group by muscle and get most recent date
+      // Build lookup map from RPC results
       const muscleLastWorked: Record<string, Date> = {};
-      recentMuscles?.forEach(muscle => {
-        if (!muscleLastWorked[muscle.muscle_group]) {
-          const exerciseSet = muscle.exercise_sets as unknown as { workout_logs: { completed_at: string } };
-          muscleLastWorked[muscle.muscle_group] = new Date(exerciseSet.workout_logs.completed_at);
-        }
+      muscleLastWorkedData?.forEach((row: { muscle_group: string; last_worked: string }) => {
+        muscleLastWorked[row.muscle_group] = new Date(row.last_worked);
       });
 
       const now = new Date();
