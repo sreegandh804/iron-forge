@@ -6,15 +6,14 @@ export const muscleToSlug: Record<string, string[]> = {
   'Shoulders (Delts)': ['front-deltoids', 'back-deltoids'],
   'Quads': ['quadriceps'],
   'Hamstrings': ['hamstring'],
-  'Back': ['upper-back', 'trapezius'],
   'Lats': ['upper-back'],
+  'Upper Back / Traps': ['trapezius'],
+  'Lower Back / Erectors': ['lower-back'],
   'Glutes': ['gluteal'],
   'Calves': ['calves'],
   'Abs': ['abs'],
   'Obliques': ['obliques'],
   'Forearms': ['forearm'],
-  'Upper Back / Traps': ['trapezius', 'upper-back'],
-  'Lower Back / Erectors': ['lower-back'],
 };
 
 // Reverse mapping from slug to display name
@@ -26,14 +25,14 @@ export const slugToMuscle: Record<string, string> = {
   'back-deltoids': 'Shoulders (Delts)',
   'quadriceps': 'Quads',
   'hamstring': 'Hamstrings',
-  'upper-back': 'Back',
+  'upper-back': 'Lats',
   'trapezius': 'Upper Back / Traps',
+  'lower-back': 'Lower Back / Erectors',
   'gluteal': 'Glutes',
   'calves': 'Calves',
   'abs': 'Abs',
   'obliques': 'Obliques',
   'forearm': 'Forearms',
-  'lower-back': 'Lower Back / Erectors',
 };
 
 // Convert muscle group name to slugs for the library
