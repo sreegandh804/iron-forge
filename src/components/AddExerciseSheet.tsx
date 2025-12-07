@@ -50,18 +50,31 @@ export function AddExerciseSheet({
 
       if (tError) throw tError;
 
-      // Map exercises with their primary muscle
+      // Map exercises with their primary muscle (prefer Shoulders over Triceps for shoulder exercises)
       return exercises?.map(ex => {
-        const primaryTarget = targets?.find(
+        const primaryTargets = targets?.filter(
           t => t.exercise_id === ex.id && t.target_type === 'primary'
-        );
+        ) || [];
+        
+        // Prioritize muscle selection: prefer Shoulders over Triceps for compound pressing movements
+        let selectedMuscle = 'Unknown';
+        if (primaryTargets.length > 0) {
+          // Check if any primary target is shoulders-related
+          const shoulderTarget = primaryTargets.find(
+            t => (t.muscle_groups as any)?.name?.toLowerCase().includes('shoulder')
+          );
+          selectedMuscle = shoulderTarget 
+            ? (shoulderTarget.muscle_groups as any)?.name 
+            : (primaryTargets[0].muscle_groups as any)?.name || 'Unknown';
+        }
+        
         return {
           id: ex.id,
           name: ex.name,
           equipmentId: ex.equipment_id,
           equipmentName: (ex.equipment as any)?.name || 'Unknown',
           isAvailable: (ex.equipment as any)?.is_available ?? true,
-          muscleGroup: (primaryTarget?.muscle_groups as any)?.name || 'Unknown',
+          muscleGroup: selectedMuscle,
         };
       }) || [];
     },

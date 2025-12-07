@@ -1,14 +1,17 @@
+import { useState } from "react";
 import { CustomExercise } from "@/types/workout";
 import { MuscleGroupBadge } from "@/components/MuscleGroupBadge";
-import { X } from "lucide-react";
+import { X, Pencil } from "lucide-react";
 import { useExercises } from "@/hooks/useExercises";
 import { useToast } from "@/hooks/use-toast";
+import { EditExerciseSheet } from "@/components/EditExerciseSheet";
 
 interface ExerciseCardProps {
   exercise: CustomExercise;
 }
 
 export function ExerciseCard({ exercise }: ExerciseCardProps) {
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const { removeExercise } = useExercises();
   const { toast } = useToast();
 
@@ -29,30 +32,46 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
   };
 
   return (
-    <div className="bg-background border-2 border-border p-3 group">
-      <div className="flex items-start justify-between gap-2">
-        <div className="space-y-2">
-          <p className="font-bold">{exercise.name}</p>
-          {exercise.description && (
-            <p className="text-xs text-muted-foreground">{exercise.description}</p>
-          )}
-          <div className="flex flex-wrap gap-1">
-            {exercise.primaryMuscles.map((m) => (
-              <MuscleGroupBadge key={m.id} name={m.name} type="primary" />
-            ))}
-            {exercise.secondaryMuscles.map((m) => (
-              <MuscleGroupBadge key={m.id} name={m.name} type="secondary" />
-            ))}
+    <>
+      <div className="bg-background border-2 border-border p-3 group">
+        <div className="flex items-start justify-between gap-2">
+          <div className="space-y-2">
+            <p className="font-bold">{exercise.name}</p>
+            {exercise.description && (
+              <p className="text-xs text-muted-foreground">{exercise.description}</p>
+            )}
+            <div className="flex flex-wrap gap-1">
+              {exercise.primaryMuscles.map((m) => (
+                <MuscleGroupBadge key={m.id} name={m.name} type="primary" />
+              ))}
+              {exercise.secondaryMuscles.map((m) => (
+                <MuscleGroupBadge key={m.id} name={m.name} type="secondary" />
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => setIsEditOpen(true)}
+              className="p-1 hover:bg-primary hover:text-primary-foreground transition-colors"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={removeExercise.isPending}
+              className="p-1 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </div>
-        <button
-          onClick={handleDelete}
-          disabled={removeExercise.isPending}
-          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive hover:text-destructive-foreground"
-        >
-          <X className="h-4 w-4" />
-        </button>
       </div>
-    </div>
+      
+      <EditExerciseSheet 
+        exercise={exercise} 
+        open={isEditOpen} 
+        onOpenChange={setIsEditOpen} 
+      />
+    </>
   );
 }
