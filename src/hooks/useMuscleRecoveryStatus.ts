@@ -24,20 +24,25 @@ export const useMuscleRecoveryStatus = () => {
 
       if (muscleError) throw muscleError;
 
-      // Fetch the most recent workout for each muscle group using workout_logs.completed_at
-      const { data: recentSets, error: setsError } = await supabase
-        .from('exercise_sets')
-        .select('muscle_group, workout_logs!inner(completed_at)')
-        .order('workout_logs(completed_at)', { ascending: false });
+      // Fetch the most recent workout for each muscle group from junction table
+      const { data: recentMuscles, error: musclesError } = await supabase
+        .from('exercise_set_muscles')
+        .select(`
+          muscle_group,
+          exercise_sets!inner(
+            workout_logs!inner(completed_at)
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-      if (setsError) throw setsError;
+      if (musclesError) throw musclesError;
 
       // Group by muscle and get most recent date
       const muscleLastWorked: Record<string, Date> = {};
-      recentSets?.forEach(set => {
-        if (!muscleLastWorked[set.muscle_group]) {
-          const workoutLog = set.workout_logs as unknown as { completed_at: string };
-          muscleLastWorked[set.muscle_group] = new Date(workoutLog.completed_at);
+      recentMuscles?.forEach(muscle => {
+        if (!muscleLastWorked[muscle.muscle_group]) {
+          const exerciseSet = muscle.exercise_sets as unknown as { workout_logs: { completed_at: string } };
+          muscleLastWorked[muscle.muscle_group] = new Date(exerciseSet.workout_logs.completed_at);
         }
       });
 

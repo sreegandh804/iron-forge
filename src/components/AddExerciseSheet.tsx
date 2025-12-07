@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Exercise } from '@/types/workout';
+import { Exercise, MuscleTarget } from '@/types/workout';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { NeuButton } from '@/components/ui/neu-button';
@@ -50,23 +50,23 @@ export function AddExerciseSheet({
 
       if (tError) throw tError;
 
-      // Map exercises with their primary muscle (prefer Shoulders over Triceps for shoulder exercises)
+      // Map exercises with ALL muscle targets
       return exercises?.map(ex => {
-        const primaryTargets = targets?.filter(
-          t => t.exercise_id === ex.id && t.target_type === 'primary'
-        ) || [];
+        const exerciseTargets = targets?.filter(t => t.exercise_id === ex.id) || [];
         
-        // Prioritize muscle selection: prefer Shoulders over Triceps for compound pressing movements
-        let selectedMuscle = 'Unknown';
-        if (primaryTargets.length > 0) {
-          // Check if any primary target is shoulders-related
-          const shoulderTarget = primaryTargets.find(
-            t => (t.muscle_groups as any)?.name?.toLowerCase().includes('shoulder')
-          );
-          selectedMuscle = shoulderTarget 
-            ? (shoulderTarget.muscle_groups as any)?.name 
-            : (primaryTargets[0].muscle_groups as any)?.name || 'Unknown';
-        }
+        // Build muscle targets array
+        const muscleTargets: MuscleTarget[] = exerciseTargets.map(t => ({
+          name: (t.muscle_groups as any)?.name || 'Unknown',
+          type: t.target_type as 'primary' | 'secondary',
+        }));
+
+        // Get primary muscle for backward compatibility
+        const primaryTarget = muscleTargets.find(m => m.type === 'primary');
+        // Prefer Shoulders over Triceps for compound pressing
+        const shoulderTarget = muscleTargets.find(
+          m => m.type === 'primary' && m.name.toLowerCase().includes('shoulder')
+        );
+        const selectedMuscle = shoulderTarget?.name || primaryTarget?.name || 'Unknown';
         
         return {
           id: ex.id,
@@ -75,6 +75,7 @@ export function AddExerciseSheet({
           equipmentName: (ex.equipment as any)?.name || 'Unknown',
           isAvailable: (ex.equipment as any)?.is_available ?? true,
           muscleGroup: selectedMuscle,
+          muscleTargets,
         };
       }) || [];
     },
@@ -106,6 +107,7 @@ export function AddExerciseSheet({
       name: exercise.name,
       equipmentId: exercise.equipmentId,
       muscleGroup: exercise.muscleGroup,
+      muscleTargets: exercise.muscleTargets,
     };
     onAddExercise(newExercise);
   };

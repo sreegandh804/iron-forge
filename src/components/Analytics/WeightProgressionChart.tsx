@@ -58,9 +58,17 @@ export function WeightProgressionChart({ data, volumeData = [] }: WeightProgress
     return [...new Set(filteredData.map(d => d.exercise))];
   }, [filteredData]);
 
-  // Get unique muscle groups from filtered data
+  // Get unique muscle groups from filtered data - using all targeted muscles
   const muscleGroups = useMemo(() => {
-    return [...new Set(filteredData.map(d => d.muscleGroup))];
+    const muscles = new Set<string>();
+    filteredData.forEach(d => {
+      if (d.muscleGroups && d.muscleGroups.length > 0) {
+        d.muscleGroups.forEach(m => muscles.add(m));
+      } else {
+        muscles.add(d.muscleGroup);
+      }
+    });
+    return [...muscles];
   }, [filteredData]);
 
   // Initialize selected exercises when data loads - select all by default
@@ -104,14 +112,21 @@ export function WeightProgressionChart({ data, volumeData = [] }: WeightProgress
     const dateMap: Record<string, Record<string, number>> = {};
     
     filteredData.forEach(d => {
-      if (!selectedMuscles.includes(d.muscleGroup)) return;
+      // Get all muscles for this data point
+      const targetedMuscles = d.muscleGroups && d.muscleGroups.length > 0 
+        ? d.muscleGroups 
+        : [d.muscleGroup];
       
-      if (!dateMap[d.date]) {
-        dateMap[d.date] = {};
-      }
-      // Take max weight across all exercises for this muscle on this date
-      const currentMax = dateMap[d.date][d.muscleGroup] || 0;
-      dateMap[d.date][d.muscleGroup] = Math.max(currentMax, d.maxWeight);
+      targetedMuscles.forEach(muscle => {
+        if (!selectedMuscles.includes(muscle)) return;
+        
+        if (!dateMap[d.date]) {
+          dateMap[d.date] = {};
+        }
+        // Take max weight across all exercises for this muscle on this date
+        const currentMax = dateMap[d.date][muscle] || 0;
+        dateMap[d.date][muscle] = Math.max(currentMax, d.maxWeight);
+      });
     });
 
     return Object.entries(dateMap)

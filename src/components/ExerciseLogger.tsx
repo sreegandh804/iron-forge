@@ -180,11 +180,48 @@ export function ExerciseLogger({ workout: initialWorkout, onBack, onWorkoutCompl
         };
       });
 
-      const { error: setsError } = await supabase
+      const { data: insertedSets, error: setsError } = await supabase
         .from("exercise_sets")
-        .insert(exerciseSetsToInsert);
+        .insert(exerciseSetsToInsert)
+        .select();
 
       if (setsError) throw setsError;
+
+      // Insert muscle targets for each set into junction table
+      const muscleTargetsToInsert: { exercise_set_id: string; muscle_group: string; target_type: string; user_id: string | undefined }[] = [];
+      
+      insertedSets?.forEach((insertedSet, index) => {
+        const originalSet = completedSets[index];
+        const exercise = workout.exercises.find(e => e.id === originalSet.exerciseId);
+        
+        if (exercise?.muscleTargets && exercise.muscleTargets.length > 0) {
+          // Use all muscle targets from the exercise
+          exercise.muscleTargets.forEach(target => {
+            muscleTargetsToInsert.push({
+              exercise_set_id: insertedSet.id,
+              muscle_group: target.name,
+              target_type: target.type,
+              user_id: user?.id,
+            });
+          });
+        } else {
+          // Fallback: use the primary muscle group
+          muscleTargetsToInsert.push({
+            exercise_set_id: insertedSet.id,
+            muscle_group: exercise?.muscleGroup || "Unknown",
+            target_type: 'primary',
+            user_id: user?.id,
+          });
+        }
+      });
+
+      if (muscleTargetsToInsert.length > 0) {
+        const { error: muscleError } = await supabase
+          .from("exercise_set_muscles")
+          .insert(muscleTargetsToInsert);
+
+        if (muscleError) throw muscleError;
+      }
 
       const totalVolume = completedSets.reduce((acc, s) => acc + s.weight * s.reps, 0);
       const prCount = newPRs.size;

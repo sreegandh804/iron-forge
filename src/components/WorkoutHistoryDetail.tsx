@@ -1,14 +1,22 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NeuCard } from "@/components/ui/neu-card";
+import { MuscleGroupBadge } from "@/components/MuscleGroupBadge";
 import { format } from "date-fns";
 import { Calendar, Dumbbell, TrendingUp, Target } from "lucide-react";
 
+interface MuscleTarget {
+  muscle_group: string;
+  target_type: string;
+}
+
 interface ExerciseSet {
+  id: string;
   exercise_name: string;
   muscle_group: string;
   weight: number;
   reps: number;
   set_number: number;
+  muscle_targets?: MuscleTarget[];
 }
 
 interface WorkoutLog {
@@ -32,26 +40,63 @@ export function WorkoutHistoryDetail({ open, onOpenChange, workout, sets }: Work
   // Group sets by exercise
   const exerciseGroups = sets.reduce((acc, set) => {
     if (!acc[set.exercise_name]) {
+      // Collect all unique muscles from this exercise's sets
+      const allMuscles = new Set<string>();
+      const primaryMuscles = new Set<string>();
+      const secondaryMuscles = new Set<string>();
+      
       acc[set.exercise_name] = {
         muscle_group: set.muscle_group,
+        primaryMuscles,
+        secondaryMuscles,
+        allMuscles,
         sets: [],
       };
     }
+    
+    // Add muscles from this set's muscle_targets
+    if (set.muscle_targets && set.muscle_targets.length > 0) {
+      set.muscle_targets.forEach(mt => {
+        acc[set.exercise_name].allMuscles.add(mt.muscle_group);
+        if (mt.target_type === 'primary') {
+          acc[set.exercise_name].primaryMuscles.add(mt.muscle_group);
+        } else {
+          acc[set.exercise_name].secondaryMuscles.add(mt.muscle_group);
+        }
+      });
+    } else {
+      acc[set.exercise_name].allMuscles.add(set.muscle_group);
+      acc[set.exercise_name].primaryMuscles.add(set.muscle_group);
+    }
+    
     acc[set.exercise_name].sets.push(set);
     return acc;
-  }, {} as Record<string, { muscle_group: string; sets: ExerciseSet[] }>);
+  }, {} as Record<string, { muscle_group: string; primaryMuscles: Set<string>; secondaryMuscles: Set<string>; allMuscles: Set<string>; sets: ExerciseSet[] }>);
 
   // Calculate totals
   const totalVolume = sets.reduce((acc, set) => acc + Number(set.weight) * set.reps, 0);
   const totalSets = sets.length;
   const exerciseCount = Object.keys(exerciseGroups).length;
 
-  // Calculate volume by muscle group
+  // Calculate volume by muscle group - using all targeted muscles
   const volumeByMuscle = sets.reduce((acc, set) => {
-    if (!acc[set.muscle_group]) {
-      acc[set.muscle_group] = 0;
+    const volume = Number(set.weight) * set.reps;
+    
+    if (set.muscle_targets && set.muscle_targets.length > 0) {
+      // Add volume to ALL targeted muscles
+      set.muscle_targets.forEach(mt => {
+        if (!acc[mt.muscle_group]) {
+          acc[mt.muscle_group] = 0;
+        }
+        acc[mt.muscle_group] += volume;
+      });
+    } else {
+      // Fallback to single muscle_group
+      if (!acc[set.muscle_group]) {
+        acc[set.muscle_group] = 0;
+      }
+      acc[set.muscle_group] += volume;
     }
-    acc[set.muscle_group] += Number(set.weight) * set.reps;
     return acc;
   }, {} as Record<string, number>);
 
@@ -97,15 +142,22 @@ export function WorkoutHistoryDetail({ open, onOpenChange, workout, sets }: Work
           
           {Object.entries(exerciseGroups).map(([exerciseName, data]) => {
             const exerciseVolume = data.sets.reduce((acc, set) => acc + Number(set.weight) * set.reps, 0);
+            const primaryMuscles = Array.from(data.primaryMuscles);
+            const secondaryMuscles = Array.from(data.secondaryMuscles);
             
             return (
               <NeuCard key={exerciseName} variant="raised" className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h4 className="font-bold">{exerciseName}</h4>
-                    <span className="text-xs text-muted-foreground uppercase bg-muted px-2 py-0.5 border border-border">
-                      {data.muscle_group}
-                    </span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {primaryMuscles.map(muscle => (
+                        <MuscleGroupBadge key={muscle} name={muscle} type="primary" />
+                      ))}
+                      {secondaryMuscles.map(muscle => (
+                        <MuscleGroupBadge key={muscle} name={muscle} type="secondary" />
+                      ))}
+                    </div>
                   </div>
                   <div className="text-right">
                     <div className="font-bold font-mono">{exerciseVolume.toLocaleString()}kg</div>

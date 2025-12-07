@@ -29,11 +29,13 @@ interface WorkoutLogWithSets {
 }
 
 interface ExerciseSet {
+  id: string;
   exercise_name: string;
   muscle_group: string;
   weight: number;
   reps: number;
   set_number: number;
+  muscle_targets?: { muscle_group: string; target_type: string }[];
 }
 
 export function WorkoutHistory() {
@@ -125,7 +127,7 @@ export function WorkoutHistory() {
     // Fetch sets for this workout
     const { data: sets, error } = await supabase
       .from("exercise_sets")
-      .select("exercise_name, muscle_group, weight, reps, set_number")
+      .select("id, exercise_name, muscle_group, weight, reps, set_number")
       .eq("workout_log_id", workout.id)
       .order("set_number", { ascending: true });
 
@@ -135,8 +137,21 @@ export function WorkoutHistory() {
       return;
     }
 
+    // Fetch muscle targets for all sets
+    const setIds = sets?.map(s => s.id) || [];
+    const { data: muscleTargets } = await supabase
+      .from("exercise_set_muscles")
+      .select("exercise_set_id, muscle_group, target_type")
+      .in("exercise_set_id", setIds);
+
+    // Attach muscle targets to each set
+    const setsWithMuscles = sets?.map(set => ({
+      ...set,
+      muscle_targets: muscleTargets?.filter(mt => mt.exercise_set_id === set.id) || [],
+    })) || [];
+
     setSelectedWorkout(workout);
-    setSelectedWorkoutSets(sets || []);
+    setSelectedWorkoutSets(setsWithMuscles);
     setDetailOpen(true);
   };
 

@@ -24,9 +24,14 @@ export function WorkoutMuscleDisplay({
       const isCompleted = completedExerciseIds.includes(ex.id);
       const isActive = ex.id === activeExerciseId;
       
+      // Use all muscle targets if available, otherwise fall back to primary muscleGroup
+      const muscles = ex.muscleTargets && ex.muscleTargets.length > 0
+        ? ex.muscleTargets.map(mt => mt.name)
+        : [ex.muscleGroup];
+      
       result.push({
         name: ex.name,
-        muscles: musclesToSlugs([ex.muscleGroup]) as any[],
+        muscles: musclesToSlugs(muscles) as any[],
         // Active gets highest priority (3), completed (2), pending (1)
         frequency: isActive ? 3 : (isCompleted ? 2 : 1),
       });
