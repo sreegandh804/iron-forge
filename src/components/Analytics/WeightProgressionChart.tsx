@@ -58,9 +58,10 @@ export function WeightProgressionChart({ data, volumeData = [] }: WeightProgress
     return [...new Set(filteredData.map(d => d.exercise))];
   }, [filteredData]);
 
-  // Get unique muscle groups from filtered data - using all targeted muscles
+  // Get unique muscle groups from filtered data AND volume data - using all targeted muscles
   const muscleGroups = useMemo(() => {
     const muscles = new Set<string>();
+    // From weight progression data
     filteredData.forEach(d => {
       if (d.muscleGroups && d.muscleGroups.length > 0) {
         d.muscleGroups.forEach(m => muscles.add(m));
@@ -68,8 +69,12 @@ export function WeightProgressionChart({ data, volumeData = [] }: WeightProgress
         muscles.add(d.muscleGroup);
       }
     });
+    // From volume data
+    volumeData.forEach(v => {
+      Object.keys(v.muscleVolumes).forEach(m => muscles.add(m));
+    });
     return [...muscles];
-  }, [filteredData]);
+  }, [filteredData, volumeData]);
 
   // Initialize selected exercises when data loads - select all by default
   useEffect(() => {
@@ -138,7 +143,7 @@ export function WeightProgressionChart({ data, volumeData = [] }: WeightProgress
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [filteredData, selectedMuscles]);
 
-  // Transform data for chart - by muscle group volume (weekly total volume per muscle)
+  // Transform data for chart - by muscle group volume (daily total volume per muscle)
   const chartDataByMuscleVolume = useMemo(() => {
     if (!volumeData || volumeData.length === 0) return [];
     
@@ -155,7 +160,7 @@ export function WeightProgressionChart({ data, volumeData = [] }: WeightProgress
     }
 
     const filtered = cutoffDate 
-      ? volumeData.filter(v => isAfter(parseISO(v.week), cutoffDate!))
+      ? volumeData.filter(v => isAfter(parseISO(v.date), cutoffDate!))
       : volumeData;
 
     return filtered
@@ -167,8 +172,8 @@ export function WeightProgressionChart({ data, volumeData = [] }: WeightProgress
           }
         });
         return {
-          date: v.week,
-          formattedDate: format(parseISO(v.week), 'MMM d'),
+          date: v.date,
+          formattedDate: format(parseISO(v.date), 'MMM d'),
           ...muscleVolumes,
         };
       })

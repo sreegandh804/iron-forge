@@ -229,7 +229,7 @@ const Index = () => {
                   ) : (
                     <WeightProgressionChart 
                       data={analyticsData?.weightProgression || []} 
-                      volumeData={analyticsData?.volumeByWeek || []}
+                      volumeData={analyticsData?.volumeByDay || []}
                     />
                   )}
                 </NeuCard>

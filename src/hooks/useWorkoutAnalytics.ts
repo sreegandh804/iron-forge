@@ -11,7 +11,7 @@ export interface WeightProgression {
 }
 
 export interface VolumeData {
-  week: string;
+  date: string;
   totalVolume: number;
   muscleVolumes: Record<string, number>;
 }
@@ -88,27 +88,27 @@ export const useWorkoutAnalytics = (days: number = 400) => {
         }
       });
 
-      // Process volume by week - using all muscle targets
-      const volumeByWeek: Record<string, VolumeData> = {};
+      // Process volume by day - using all muscle targets
+      const volumeByDay: Record<string, VolumeData> = {};
       sets?.forEach((set: any) => {
-        const weekStart = format(startOfWeek(parseISO(set.workout_logs.completed_at), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+        const dateStr = format(parseISO(set.workout_logs.completed_at), 'yyyy-MM-dd');
         const volume = Number(set.weight) * set.reps;
         
-        if (!volumeByWeek[weekStart]) {
-          volumeByWeek[weekStart] = {
-            week: weekStart,
+        if (!volumeByDay[dateStr]) {
+          volumeByDay[dateStr] = {
+            date: dateStr,
             totalVolume: 0,
             muscleVolumes: {},
           };
         }
 
-        volumeByWeek[weekStart].totalVolume += volume;
+        volumeByDay[dateStr].totalVolume += volume;
         
         // Add volume to ALL muscle groups this set targets
         const muscles = setMuscles[set.id] || [{ muscle_group: set.muscle_group, target_type: 'primary' }];
         muscles.forEach(m => {
-          volumeByWeek[weekStart].muscleVolumes[m.muscle_group] = 
-            (volumeByWeek[weekStart].muscleVolumes[m.muscle_group] || 0) + volume;
+          volumeByDay[dateStr].muscleVolumes[m.muscle_group] = 
+            (volumeByDay[dateStr].muscleVolumes[m.muscle_group] || 0) + volume;
         });
       });
 
@@ -141,8 +141,8 @@ export const useWorkoutAnalytics = (days: number = 400) => {
         weightProgression: Object.values(weightByExercise).flat().sort((a, b) => 
           new Date(a.date).getTime() - new Date(b.date).getTime()
         ),
-        volumeByWeek: Object.values(volumeByWeek).sort((a, b) => 
-          new Date(a.week).getTime() - new Date(b.week).getTime()
+        volumeByDay: Object.values(volumeByDay).sort((a, b) => 
+          new Date(a.date).getTime() - new Date(b.date).getTime()
         ),
         muscleFrequency: Object.entries(muscleFrequency)
           .map(([muscle, count]) => ({ muscle, count }))
