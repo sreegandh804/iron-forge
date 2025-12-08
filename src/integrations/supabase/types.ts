@@ -363,6 +363,7 @@ export type Database = {
           created_at: string
           id: string
           program_type: string
+          status: string | null
           user_id: string | null
           workout_description: string | null
           workout_title: string
@@ -372,6 +373,7 @@ export type Database = {
           created_at?: string
           id?: string
           program_type: string
+          status?: string | null
           user_id?: string | null
           workout_description?: string | null
           workout_title: string
@@ -381,6 +383,7 @@ export type Database = {
           created_at?: string
           id?: string
           program_type?: string
+          status?: string | null
           user_id?: string | null
           workout_description?: string | null
           workout_title?: string
@@ -394,6 +397,7 @@ export type Database = {
           exercise_name: string
           id: string
           muscle_group: string
+          muscle_targets: Json | null
           sort_order: number | null
           template_id: string
         }
@@ -403,6 +407,7 @@ export type Database = {
           exercise_name: string
           id?: string
           muscle_group: string
+          muscle_targets?: Json | null
           sort_order?: number | null
           template_id: string
         }
@@ -412,6 +417,7 @@ export type Database = {
           exercise_name?: string
           id?: string
           muscle_group?: string
+          muscle_targets?: Json | null
           sort_order?: number | null
           template_id?: string
         }

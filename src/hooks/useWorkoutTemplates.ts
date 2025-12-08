@@ -13,6 +13,11 @@ interface WorkoutTemplate {
   is_system: boolean;
 }
 
+interface MuscleTarget {
+  name: string;
+  type: 'primary' | 'secondary';
+}
+
 interface TemplateExercise {
   id: string;
   template_id: string;
@@ -20,6 +25,7 @@ interface TemplateExercise {
   muscle_group: string;
   equipment_name: string | null;
   sort_order: number;
+  muscle_targets: MuscleTarget[] | null;
 }
 
 interface UserWorkoutTemplate {
@@ -72,6 +78,7 @@ export function useWorkoutTemplates(programType: ProgramType | null) {
             name: e.exercise_name,
             muscleGroup: e.muscle_group,
             equipmentName: e.equipment_name,
+            muscleTargets: e.muscle_targets || [{ name: e.muscle_group, type: 'primary' as const }],
           }));
 
         return {
