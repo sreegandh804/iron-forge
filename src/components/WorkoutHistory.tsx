@@ -54,6 +54,7 @@ export function WorkoutHistory() {
     const { data: workoutLogs, error } = await supabase
       .from("workout_logs")
       .select("*")
+      .eq("status", "completed")
       .order("completed_at", { ascending: false })
       .limit(10);
 

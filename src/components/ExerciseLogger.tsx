@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Workout, Exercise, ExerciseSet } from "@/types/workout";
 import { NeuCard } from "@/components/ui/neu-card";
 import { NeuButton } from "@/components/ui/neu-button";
-import { ArrowLeft, Plus, Check, Trash2, Loader2, Minus, Trophy, X } from "lucide-react";
+import { ArrowLeft, Plus, Check, Trash2, Loader2, Minus, Trophy, X, Save } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { WorkoutMuscleDisplay } from "@/components/MuscleBody/WorkoutMuscleDisplay";
@@ -22,8 +22,10 @@ export function ExerciseLogger({ workout: initialWorkout, onBack, onWorkoutCompl
   const [sets, setSets] = useState<Record<string, ExerciseSet[]>>({});
   const [activeExercise, setActiveExercise] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [savingProgress, setSavingProgress] = useState(false);
   const [newPRs, setNewPRs] = useState<Set<string>>(new Set());
   const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false);
+  const [currentWorkoutLogId, setCurrentWorkoutLogId] = useState<string | null>(null);
 
   const { user } = useAuth();
   const { data: lastWorkoutSets } = useLastWorkoutSets();
@@ -139,6 +141,121 @@ export function ExerciseLogger({ workout: initialWorkout, onBack, onWorkoutCompl
     });
   };
 
+  // Helper to save sets to database
+  const saveSetsToDatabase = async (workoutLogId: string, setsToSave: Array<{ exerciseId: string; weight: number; reps: number; id: string }>) => {
+    // Delete existing sets for this workout log first (for updates)
+    if (currentWorkoutLogId) {
+      await supabase.from("exercise_set_muscles").delete().eq("user_id", user?.id);
+      await supabase.from("exercise_sets").delete().eq("workout_log_id", workoutLogId);
+    }
+
+    // Create exercise sets with user_id
+    const exerciseSetsToInsert = setsToSave.map((set, index) => {
+      const exercise = workout.exercises.find(e => e.id === set.exerciseId);
+      return {
+        workout_log_id: workoutLogId,
+        exercise_name: exercise?.name || "Unknown",
+        muscle_group: exercise?.muscleGroup || "Unknown",
+        weight: set.weight,
+        reps: set.reps,
+        set_number: index + 1,
+        user_id: user?.id,
+      };
+    });
+
+    const { data: insertedSets, error: setsError } = await supabase
+      .from("exercise_sets")
+      .insert(exerciseSetsToInsert)
+      .select();
+
+    if (setsError) throw setsError;
+
+    // Insert muscle targets for each set into junction table
+    const muscleTargetsToInsert: { exercise_set_id: string; muscle_group: string; target_type: string; user_id: string | undefined }[] = [];
+    
+    insertedSets?.forEach((insertedSet, index) => {
+      const originalSet = setsToSave[index];
+      const exercise = workout.exercises.find(e => e.id === originalSet.exerciseId);
+      
+      if (exercise?.muscleTargets && exercise.muscleTargets.length > 0) {
+        // Use all muscle targets from the exercise
+        exercise.muscleTargets.forEach(target => {
+          muscleTargetsToInsert.push({
+            exercise_set_id: insertedSet.id,
+            muscle_group: target.name,
+            target_type: target.type,
+            user_id: user?.id,
+          });
+        });
+      } else {
+        // Fallback: use the primary muscle group
+        muscleTargetsToInsert.push({
+          exercise_set_id: insertedSet.id,
+          muscle_group: exercise?.muscleGroup || "Unknown",
+          target_type: 'primary',
+          user_id: user?.id,
+        });
+      }
+    });
+
+    if (muscleTargetsToInsert.length > 0) {
+      const { error: muscleError } = await supabase
+        .from("exercise_set_muscles")
+        .insert(muscleTargetsToInsert);
+
+      if (muscleError) throw muscleError;
+    }
+
+    return insertedSets;
+  };
+
+  // Save progress (keeps workout in_progress)
+  const saveProgress = async () => {
+    const completedSets = Object.entries(sets).flatMap(([exerciseId, exerciseSets]) =>
+      exerciseSets.filter(s => s.completed).map(s => ({ ...s, exerciseId }))
+    );
+
+    if (completedSets.length === 0) {
+      toast.error("Complete at least one set to save progress!");
+      return;
+    }
+
+    setSavingProgress(true);
+
+    try {
+      let workoutLogId = currentWorkoutLogId;
+
+      if (!workoutLogId) {
+        // Create new workout log with in_progress status
+        const { data: workoutLog, error: logError } = await supabase
+          .from("workout_logs")
+          .insert({
+            workout_title: workout.title,
+            workout_description: workout.description,
+            program_type: workout.programType,
+            user_id: user?.id,
+            status: 'in_progress',
+          })
+          .select()
+          .single();
+
+        if (logError) throw logError;
+        workoutLogId = workoutLog.id;
+        setCurrentWorkoutLogId(workoutLogId);
+      }
+
+      await saveSetsToDatabase(workoutLogId, completedSets);
+
+      const totalVolume = completedSets.reduce((acc, s) => acc + s.weight * s.reps, 0);
+      toast.success(`Progress saved! ${completedSets.length} sets, ${totalVolume.toLocaleString()}kg`);
+    } catch (error) {
+      console.error("Error saving progress:", error);
+      toast.error("Failed to save progress. Please try again.");
+    } finally {
+      setSavingProgress(false);
+    }
+  };
+
   const finishWorkout = async () => {
     const completedSets = Object.entries(sets).flatMap(([exerciseId, exerciseSets]) =>
       exerciseSets.filter(s => s.completed).map(s => ({ ...s, exerciseId }))
@@ -152,76 +269,35 @@ export function ExerciseLogger({ workout: initialWorkout, onBack, onWorkoutCompl
     setSaving(true);
 
     try {
-      // Create workout log with user_id
-      const { data: workoutLog, error: logError } = await supabase
-        .from("workout_logs")
-        .insert({
-          workout_title: workout.title,
-          workout_description: workout.description,
-          program_type: workout.programType,
-          user_id: user?.id,
-        })
-        .select()
-        .single();
+      let workoutLogId = currentWorkoutLogId;
 
-      if (logError) throw logError;
-
-      // Create exercise sets with user_id
-      const exerciseSetsToInsert = completedSets.map((set, index) => {
-        const exercise = workout.exercises.find(e => e.id === set.exerciseId);
-        return {
-          workout_log_id: workoutLog.id,
-          exercise_name: exercise?.name || "Unknown",
-          muscle_group: exercise?.muscleGroup || "Unknown",
-          weight: set.weight,
-          reps: set.reps,
-          set_number: index + 1,
-          user_id: user?.id,
-        };
-      });
-
-      const { data: insertedSets, error: setsError } = await supabase
-        .from("exercise_sets")
-        .insert(exerciseSetsToInsert)
-        .select();
-
-      if (setsError) throw setsError;
-
-      // Insert muscle targets for each set into junction table
-      const muscleTargetsToInsert: { exercise_set_id: string; muscle_group: string; target_type: string; user_id: string | undefined }[] = [];
-      
-      insertedSets?.forEach((insertedSet, index) => {
-        const originalSet = completedSets[index];
-        const exercise = workout.exercises.find(e => e.id === originalSet.exerciseId);
-        
-        if (exercise?.muscleTargets && exercise.muscleTargets.length > 0) {
-          // Use all muscle targets from the exercise
-          exercise.muscleTargets.forEach(target => {
-            muscleTargetsToInsert.push({
-              exercise_set_id: insertedSet.id,
-              muscle_group: target.name,
-              target_type: target.type,
-              user_id: user?.id,
-            });
-          });
-        } else {
-          // Fallback: use the primary muscle group
-          muscleTargetsToInsert.push({
-            exercise_set_id: insertedSet.id,
-            muscle_group: exercise?.muscleGroup || "Unknown",
-            target_type: 'primary',
+      if (!workoutLogId) {
+        // Create workout log with completed status
+        const { data: workoutLog, error: logError } = await supabase
+          .from("workout_logs")
+          .insert({
+            workout_title: workout.title,
+            workout_description: workout.description,
+            program_type: workout.programType,
             user_id: user?.id,
-          });
-        }
-      });
+            status: 'completed',
+          })
+          .select()
+          .single();
 
-      if (muscleTargetsToInsert.length > 0) {
-        const { error: muscleError } = await supabase
-          .from("exercise_set_muscles")
-          .insert(muscleTargetsToInsert);
+        if (logError) throw logError;
+        workoutLogId = workoutLog.id;
+      } else {
+        // Update existing workout log to completed
+        const { error: updateError } = await supabase
+          .from("workout_logs")
+          .update({ status: 'completed', completed_at: new Date().toISOString() })
+          .eq("id", workoutLogId);
 
-        if (muscleError) throw muscleError;
+        if (updateError) throw updateError;
       }
+
+      await saveSetsToDatabase(workoutLogId, completedSets);
 
       const totalVolume = completedSets.reduce((acc, s) => acc + s.weight * s.reps, 0);
       const prCount = newPRs.size;
@@ -431,10 +507,28 @@ export function ExerciseLogger({ workout: initialWorkout, onBack, onWorkoutCompl
             );
           })}
 
-          <NeuButton variant="default" size="lg" className="w-full h-14" onClick={finishWorkout} disabled={saving}>
-            {saving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Check className="h-5 w-5 mr-2" />}
-            {saving ? "Saving..." : "Finish Workout"}
-          </NeuButton>
+          <div className="flex gap-3">
+            <NeuButton 
+              variant="secondary" 
+              size="lg" 
+              className="flex-1 h-14" 
+              onClick={saveProgress} 
+              disabled={savingProgress || saving}
+            >
+              {savingProgress ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Save className="h-5 w-5 mr-2" />}
+              {savingProgress ? "Saving..." : "Save Progress"}
+            </NeuButton>
+            <NeuButton 
+              variant="default" 
+              size="lg" 
+              className="flex-1 h-14" 
+              onClick={finishWorkout} 
+              disabled={saving || savingProgress}
+            >
+              {saving ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Check className="h-5 w-5 mr-2" />}
+              {saving ? "Saving..." : "Finish Workout"}
+            </NeuButton>
+          </div>
         </div>
 
         {/* Muscle Diagram Sidebar - Hidden on mobile */}
