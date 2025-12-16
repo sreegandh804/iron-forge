@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Workout, Exercise, ExerciseSet } from "@/types/workout";
 import { NeuCard } from "@/components/ui/neu-card";
 import { NeuButton } from "@/components/ui/neu-button";
-import { ArrowLeft, Plus, Check, Trash2, Loader2, Minus, Trophy, X, Save } from "lucide-react";
+import { ArrowLeft, Plus, Check, Trash2, Loader2, Minus, Trophy, X, Save, TrendingUp, TrendingDown, Minus as MinusIcon } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { WorkoutMuscleDisplay } from "@/components/MuscleBody/WorkoutMuscleDisplay";
@@ -10,6 +10,7 @@ import { useLastWorkoutSets } from "@/hooks/useLastWorkoutSets";
 import { usePersonalRecords } from "@/hooks/usePersonalRecords";
 import { useAuth } from "@/hooks/useAuth";
 import { AddExerciseSheet } from "@/components/AddExerciseSheet";
+import { useExerciseProgress, ProgressStatus } from "@/hooks/useExerciseProgress";
 
 interface ExerciseLoggerProps {
   workout: Workout;
@@ -31,10 +32,38 @@ export function ExerciseLogger({ workout: initialWorkout, onBack, onWorkoutCompl
   const { data: lastWorkoutSets } = useLastWorkoutSets();
   const { data: personalRecords } = usePersonalRecords();
 
+  const exerciseNames = useMemo(() => 
+    workout.exercises.map(ex => ex.name), 
+    [workout.exercises]
+  );
+  const { data: progressData } = useExerciseProgress(exerciseNames);
+
   const existingExerciseIds = useMemo(() => 
     workout.exercises.map(ex => ex.id), 
     [workout.exercises]
   );
+
+  const getProgressIndicator = (status: ProgressStatus) => {
+    switch (status) {
+      case 'improving':
+        return <TrendingUp className="h-4 w-4 text-green-500" />;
+      case 'regressing':
+        return <TrendingDown className="h-4 w-4 text-red-500" />;
+      case 'plateau':
+        return <MinusIcon className="h-4 w-4 text-amber-500" />;
+      default:
+        return null;
+    }
+  };
+
+  const getProgressLabel = (status: ProgressStatus) => {
+    switch (status) {
+      case 'improving': return 'Improving';
+      case 'regressing': return 'Regressing';
+      case 'plateau': return 'Plateau';
+      default: return '';
+    }
+  };
 
   const handleAddExercise = (exercise: Exercise) => {
     setWorkout(prev => ({
@@ -367,6 +396,11 @@ export function ExerciseLogger({ workout: initialWorkout, onBack, onWorkoutCompl
                         <div className="flex items-center gap-2">
                           <h3 className="font-bold text-lg">{exercise.name}</h3>
                           {hasPR && <Trophy className="h-4 w-4 text-yellow-500" />}
+                          {progressData?.[exercise.name] && progressData[exercise.name].status !== 'insufficient' && (
+                            <span className="flex items-center gap-1" title={getProgressLabel(progressData[exercise.name].status)}>
+                              {getProgressIndicator(progressData[exercise.name].status)}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground font-mono uppercase">
                           {exercise.muscleGroup}
@@ -374,6 +408,11 @@ export function ExerciseLogger({ workout: initialWorkout, onBack, onWorkoutCompl
                         {lastWorkout && !isActive && (
                           <p className="text-xs text-muted-foreground font-mono">
                             Last: {lastWorkout.weight}kg × {lastWorkout.reps}
+                          </p>
+                        )}
+                        {progressData?.[exercise.name]?.consecutivePlateaus >= 3 && !isActive && (
+                          <p className="text-xs text-amber-500 font-mono mt-1">
+                            ⚠️ Plateau - try increasing weight
                           </p>
                         )}
                       </div>
