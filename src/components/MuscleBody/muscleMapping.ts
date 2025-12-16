@@ -14,6 +14,7 @@ export const muscleToSlug: Record<string, string[]> = {
   'Abs': ['abs'],
   'Obliques': ['obliques'],
   'Forearms': ['forearm'],
+  'Adductors': ['adductor'],
 };
 
 // Reverse mapping from slug to display name
@@ -33,6 +34,7 @@ export const slugToMuscle: Record<string, string> = {
   'abs': 'Abs',
   'obliques': 'Obliques',
   'forearm': 'Forearms',
+  'adductor': 'Adductors',
 };
 
 // Convert muscle group name to slugs for the library
