@@ -47,29 +47,37 @@ interface InProgressWorkoutsProps {
 export function InProgressWorkouts({ onContinue, refreshKey }: InProgressWorkoutsProps) {
   const [workouts, setWorkouts] = useState<InProgressWorkout[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [discarding, setDiscarding] = useState<string | null>(null);
   const [continuing, setContinuing] = useState<string | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
     const fetchInProgressWorkouts = async () => {
+      setLoading(true);
+      setError(null);
+
       if (!user?.id) {
+        console.debug("[InProgressWorkouts] No user ID, skipping fetch");
         setLoading(false);
         return;
       }
 
       try {
-        const { data: logs, error } = await supabase
+        console.debug("[InProgressWorkouts] Fetching for user:", user.id);
+        const { data: logs, error: logsError } = await supabase
           .from("workout_logs")
           .select("*")
           .eq("user_id", user.id)
           .eq("status", "in_progress")
           .order("created_at", { ascending: false });
 
-        if (error) throw error;
+        if (logsError) throw logsError;
 
-        // Fetch sets for each workout to calculate totals
-        const workoutsWithStats = await Promise.all(
+        console.debug("[InProgressWorkouts] Found logs:", logs?.length || 0);
+
+        // Fetch sets for each workout to calculate totals - use Promise.allSettled for resilience
+        const statsResults = await Promise.allSettled(
           (logs || []).map(async (log) => {
             const { data: sets } = await supabase
               .from("exercise_sets")
@@ -91,9 +99,14 @@ export function InProgressWorkouts({ onContinue, refreshKey }: InProgressWorkout
           })
         );
 
+        const workoutsWithStats = statsResults
+          .filter((result): result is PromiseFulfilledResult<InProgressWorkout> => result.status === 'fulfilled')
+          .map(result => result.value);
+
         setWorkouts(workoutsWithStats);
-      } catch (error) {
-        console.error("Error fetching in-progress workouts:", error);
+      } catch (err) {
+        console.error("[InProgressWorkouts] Error fetching:", err);
+        setError("Failed to load in-progress workouts");
       } finally {
         setLoading(false);
       }
@@ -240,9 +253,6 @@ export function InProgressWorkouts({ onContinue, refreshKey }: InProgressWorkout
     }
   };
 
-  if (loading) return null;
-  if (workouts.length === 0) return null;
-
   return (
     <section className="space-y-4">
       <div className="space-y-2">
@@ -255,68 +265,89 @@ export function InProgressWorkouts({ onContinue, refreshKey }: InProgressWorkout
         </p>
       </div>
 
-      <div className="space-y-3">
-        {workouts.map((workout) => (
-          <NeuCard key={workout.id} variant="raised" className="p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex-1">
-                <h3 className="font-bold text-lg">{workout.workout_title}</h3>
-                <p className="text-xs text-muted-foreground font-mono">
-                  Started: {format(new Date(workout.created_at), "MMM d, h:mm a")}
-                </p>
-                <p className="text-sm text-muted-foreground font-mono mt-1">
-                  {workout.totalSets} sets • {workout.totalVolume.toLocaleString()}kg volume
-                </p>
+      {loading && (
+        <NeuCard variant="flat" className="p-4 flex items-center gap-3">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <span className="text-muted-foreground font-mono text-sm">Loading saved workouts...</span>
+        </NeuCard>
+      )}
+
+      {error && !loading && (
+        <NeuCard variant="flat" className="p-4 border-destructive">
+          <p className="text-destructive font-mono text-sm">{error}</p>
+        </NeuCard>
+      )}
+
+      {!loading && !error && workouts.length === 0 && (
+        <NeuCard variant="flat" className="p-4">
+          <p className="text-muted-foreground font-mono text-sm">No saved progress yet. Start a workout and save your progress!</p>
+        </NeuCard>
+      )}
+
+      {!loading && !error && workouts.length > 0 && (
+        <div className="space-y-3">
+          {workouts.map((workout) => (
+            <NeuCard key={workout.id} variant="raised" className="p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg">{workout.workout_title}</h3>
+                  <p className="text-xs text-muted-foreground font-mono">
+                    Started: {format(new Date(workout.created_at), "MMM d, h:mm a")}
+                  </p>
+                  <p className="text-sm text-muted-foreground font-mono mt-1">
+                    {workout.totalSets} sets • {workout.totalVolume.toLocaleString()}kg volume
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <NeuButton
+                    variant="default"
+                    onClick={() => handleContinue(workout)}
+                    disabled={continuing === workout.id}
+                    className="flex-1 sm:flex-none"
+                  >
+                    {continuing === workout.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Play className="h-4 w-4 mr-2" />
+                    )}
+                    Continue
+                  </NeuButton>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <NeuButton
+                        variant="outline"
+                        size="icon"
+                        disabled={discarding === workout.id}
+                      >
+                        {discarding === workout.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </NeuButton>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Discard Workout?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete your in-progress workout "{workout.workout_title}" 
+                          with {workout.totalSets} saved sets. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDiscard(workout.id)}>
+                          Discard
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <NeuButton
-                  variant="default"
-                  onClick={() => handleContinue(workout)}
-                  disabled={continuing === workout.id}
-                  className="flex-1 sm:flex-none"
-                >
-                  {continuing === workout.id ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Play className="h-4 w-4 mr-2" />
-                  )}
-                  Continue
-                </NeuButton>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <NeuButton
-                      variant="outline"
-                      size="icon"
-                      disabled={discarding === workout.id}
-                    >
-                      {discarding === workout.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </NeuButton>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Discard Workout?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently delete your in-progress workout "{workout.workout_title}" 
-                        with {workout.totalSets} saved sets. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDiscard(workout.id)}>
-                        Discard
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </div>
-          </NeuCard>
-        ))}
-      </div>
+            </NeuCard>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

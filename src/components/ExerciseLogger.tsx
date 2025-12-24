@@ -363,8 +363,16 @@ export function ExerciseLogger({
     }
   };
 
+  const isResumedWorkout = !!initialWorkoutLogId;
+
   return (
     <section className="space-y-6 pb-24 lg:pb-6">
+      {isResumedWorkout && (
+        <div className="bg-accent/20 border-2 border-accent p-3 text-sm font-mono">
+          <span className="text-accent-foreground">📋 Resumed workout — edits will overwrite saved progress on next save</span>
+        </div>
+      )}
+      
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <NeuButton variant="outline" size="icon" onClick={onBack} className="h-12 w-12">

@@ -224,6 +224,12 @@ const Index = () => {
                 />
               )}
 
+              {/* In-Progress Workouts - placed prominently */}
+              <InProgressWorkouts 
+                onContinue={handleContinueWorkout}
+                refreshKey={historyKey}
+              />
+
               {/* Weight Progression Chart */}
               <section className="space-y-4 sm:space-y-6">
                 <div className="space-y-2">
@@ -248,11 +254,6 @@ const Index = () => {
                   )}
                 </NeuCard>
               </section>
-
-              <InProgressWorkouts 
-                onContinue={handleContinueWorkout}
-                refreshKey={historyKey}
-              />
 
               <div id="history-section">
                 <WorkoutHistory key={historyKey} />
