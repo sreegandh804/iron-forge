@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { ProgramType, Workout } from "@/types/workout";
+import { ProgramType, Workout, ExerciseSet } from "@/types/workout";
 import { ProgramSelector } from "@/components/ProgramSelector";
 import { EquipmentManager } from "@/components/EquipmentManager";
 import { WorkoutList } from "@/components/WorkoutList";
@@ -13,6 +13,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { WeightProgressionChart } from "@/components/Analytics/WeightProgressionChart";
 import { ProgramExerciseCustomizer } from "@/components/ProgramExerciseCustomizer";
 import { CustomProgramManager } from "@/components/CustomProgramManager";
+import { InProgressWorkouts } from "@/components/InProgressWorkouts";
 import { useWorkoutAnalytics } from "@/hooks/useWorkoutAnalytics";
 import { useWorkoutTemplates } from "@/hooks/useWorkoutTemplates";
 import { useCustomPrograms } from "@/hooks/useCustomPrograms";
@@ -34,6 +35,8 @@ const Index = () => {
   const [workoutStep, setWorkoutStep] = useState<WorkoutStep>('browse');
   const [historyKey, setHistoryKey] = useState(0);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [resumedWorkoutLogId, setResumedWorkoutLogId] = useState<string | null>(null);
+  const [resumedSets, setResumedSets] = useState<Record<string, ExerciseSet[]>>({});
 
   const { data: analyticsData, isLoading: analyticsLoading } = useWorkoutAnalytics(730);
   const { workouts: templateWorkouts, isLoading: templatesLoading } = useWorkoutTemplates(selectedProgram);
@@ -86,7 +89,16 @@ const Index = () => {
   const handleBackFromLogging = () => {
     setActiveWorkout(null);
     setSelectedWorkout(null);
+    setResumedWorkoutLogId(null);
+    setResumedSets({});
     setWorkoutStep('browse');
+  };
+
+  const handleContinueWorkout = (workout: Workout, workoutLogId: string, savedSets: Record<string, ExerciseSet[]>) => {
+    setActiveWorkout(workout);
+    setResumedWorkoutLogId(workoutLogId);
+    setResumedSets(savedSets);
+    setWorkoutStep('logging');
   };
 
   // Program exercise customization screen
@@ -137,6 +149,8 @@ const Index = () => {
             workout={activeWorkout} 
             onBack={handleBackFromLogging} 
             onWorkoutComplete={handleWorkoutComplete}
+            initialWorkoutLogId={resumedWorkoutLogId}
+            initialSets={resumedSets}
           />
         </div>
       </main>
@@ -234,6 +248,11 @@ const Index = () => {
                   )}
                 </NeuCard>
               </section>
+
+              <InProgressWorkouts 
+                onContinue={handleContinueWorkout}
+                refreshKey={historyKey}
+              />
 
               <div id="history-section">
                 <WorkoutHistory key={historyKey} />

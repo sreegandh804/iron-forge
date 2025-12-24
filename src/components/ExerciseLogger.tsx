@@ -16,17 +16,25 @@ interface ExerciseLoggerProps {
   workout: Workout;
   onBack: () => void;
   onWorkoutComplete?: () => void;
+  initialWorkoutLogId?: string | null;
+  initialSets?: Record<string, ExerciseSet[]>;
 }
 
-export function ExerciseLogger({ workout: initialWorkout, onBack, onWorkoutComplete }: ExerciseLoggerProps) {
+export function ExerciseLogger({ 
+  workout: initialWorkout, 
+  onBack, 
+  onWorkoutComplete,
+  initialWorkoutLogId = null,
+  initialSets = {},
+}: ExerciseLoggerProps) {
   const [workout, setWorkout] = useState<Workout>(initialWorkout);
-  const [sets, setSets] = useState<Record<string, ExerciseSet[]>>({});
+  const [sets, setSets] = useState<Record<string, ExerciseSet[]>>(initialSets);
   const [activeExercise, setActiveExercise] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [savingProgress, setSavingProgress] = useState(false);
   const [newPRs, setNewPRs] = useState<Set<string>>(new Set());
   const [isAddExerciseOpen, setIsAddExerciseOpen] = useState(false);
-  const [currentWorkoutLogId, setCurrentWorkoutLogId] = useState<string | null>(null);
+  const [currentWorkoutLogId, setCurrentWorkoutLogId] = useState<string | null>(initialWorkoutLogId);
 
   const { user } = useAuth();
   const { data: lastWorkoutSets } = useLastWorkoutSets();
@@ -173,10 +181,23 @@ export function ExerciseLogger({ workout: initialWorkout, onBack, onWorkoutCompl
   // Helper to save sets to database
   const saveSetsToDatabase = async (workoutLogId: string, setsToSave: Array<{ exerciseId: string; weight: number; reps: number; id: string }>) => {
     // Delete existing sets for this workout log first (for updates)
-    if (currentWorkoutLogId) {
-      await supabase.from("exercise_set_muscles").delete().eq("user_id", user?.id);
-      await supabase.from("exercise_sets").delete().eq("workout_log_id", workoutLogId);
+    // First get the set IDs for this specific workout to properly clean up muscle targets
+    const { data: existingSets } = await supabase
+      .from("exercise_sets")
+      .select("id")
+      .eq("workout_log_id", workoutLogId);
+
+    if (existingSets && existingSets.length > 0) {
+      const setIds = existingSets.map(s => s.id);
+      // Delete muscle targets only for this workout's sets
+      await supabase
+        .from("exercise_set_muscles")
+        .delete()
+        .in("exercise_set_id", setIds);
     }
+    
+    // Delete the exercise sets for this workout
+    await supabase.from("exercise_sets").delete().eq("workout_log_id", workoutLogId);
 
     // Create exercise sets with user_id
     const exerciseSetsToInsert = setsToSave.map((set, index) => {
