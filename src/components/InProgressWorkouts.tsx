@@ -51,51 +51,54 @@ export function InProgressWorkouts({ onContinue, refreshKey }: InProgressWorkout
   const [continuing, setContinuing] = useState<string | null>(null);
   const { user } = useAuth();
 
-  const fetchInProgressWorkouts = async () => {
-    if (!user?.id) return;
-
-    try {
-      const { data: logs, error } = await supabase
-        .from("workout_logs")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("status", "in_progress")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      // Fetch sets for each workout to calculate totals
-      const workoutsWithStats = await Promise.all(
-        (logs || []).map(async (log) => {
-          const { data: sets } = await supabase
-            .from("exercise_sets")
-            .select("weight, reps")
-            .eq("workout_log_id", log.id);
-
-          const totalSets = sets?.length || 0;
-          const totalVolume = sets?.reduce((acc, s) => acc + s.weight * s.reps, 0) || 0;
-
-          return {
-            id: log.id,
-            workout_title: log.workout_title,
-            workout_description: log.workout_description,
-            program_type: log.program_type,
-            created_at: log.created_at,
-            totalSets,
-            totalVolume,
-          };
-        })
-      );
-
-      setWorkouts(workoutsWithStats);
-    } catch (error) {
-      console.error("Error fetching in-progress workouts:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchInProgressWorkouts = async () => {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data: logs, error } = await supabase
+          .from("workout_logs")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("status", "in_progress")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        // Fetch sets for each workout to calculate totals
+        const workoutsWithStats = await Promise.all(
+          (logs || []).map(async (log) => {
+            const { data: sets } = await supabase
+              .from("exercise_sets")
+              .select("weight, reps")
+              .eq("workout_log_id", log.id);
+
+            const totalSets = sets?.length || 0;
+            const totalVolume = sets?.reduce((acc, s) => acc + s.weight * s.reps, 0) || 0;
+
+            return {
+              id: log.id,
+              workout_title: log.workout_title,
+              workout_description: log.workout_description,
+              program_type: log.program_type,
+              created_at: log.created_at,
+              totalSets,
+              totalVolume,
+            };
+          })
+        );
+
+        setWorkouts(workoutsWithStats);
+      } catch (error) {
+        console.error("Error fetching in-progress workouts:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchInProgressWorkouts();
   }, [user?.id, refreshKey]);
 
