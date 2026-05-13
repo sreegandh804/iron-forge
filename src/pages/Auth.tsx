@@ -207,10 +207,12 @@ export default function Auth() {
               variant="default"
               size="lg"
               className="w-full h-12"
-              disabled={loading}
+              disabled={loading || cooldownSeconds > 0}
             >
               {loading ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
+              ) : cooldownSeconds > 0 ? (
+                `Wait ${cooldownSeconds}s`
               ) : isLogin ? (
                 'Sign In'
               ) : (
