@@ -20,9 +20,26 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const [rateLimitError, setRateLimitError] = useState(false);
   
   const { user, signIn, signUp, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Cooldown timer
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const timer = setInterval(() => {
+      setCooldownSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldownSeconds]);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -31,9 +48,22 @@ export default function Auth() {
     }
   }, [user, authLoading, navigate]);
 
+  const isRateLimitError = (message: string): boolean => {
+    return message.includes('429') || 
+           message.includes('rate limit') || 
+           message.includes('rate_limit') ||
+           message.includes('too many requests');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+    setRateLimitError(false);
+
+    if (cooldownSeconds > 0) {
+      toast.error(`Please wait ${cooldownSeconds}s before trying again.`);
+      return;
+    }
 
     // Validate
     const result = authSchema.safeParse({ email, password });
@@ -55,6 +85,10 @@ export default function Auth() {
         if (error) {
           if (error.message.includes('Invalid login credentials')) {
             toast.error('Invalid email or password');
+          } else if (isRateLimitError(error.message)) {
+            setRateLimitError(true);
+            setCooldownSeconds(60);
+            toast.error('Too many attempts. Please wait 1 minute and try again.');
           } else {
             toast.error(error.message);
           }
@@ -63,15 +97,28 @@ export default function Auth() {
           navigate('/');
         }
       } else {
-        const { error } = await signUp(email, password);
+        const { data, error } = await signUp(email, password);
         if (error) {
           if (error.message.includes('already registered')) {
             toast.error('This email is already registered. Try logging in.');
+          } else if (isRateLimitError(error.message)) {
+            setRateLimitError(true);
+            setCooldownSeconds(60);
+            toast.error('Email confirmation limit reached. Please wait 1 minute before trying again.');
           } else {
             toast.error(error.message);
           }
         } else {
-          toast.success('Account created! Check your email to confirm.');
+          // Check if user needs email confirmation
+          if (data?.user?.identities?.length === 0) {
+            toast.success('Account already exists. Check your email or try logging in.');
+          } else if (data?.session) {
+            // Auto-confirmed (no email required)
+            toast.success('Account created successfully!');
+            navigate('/');
+          } else {
+            toast.success('Account created! Check your email to confirm.');
+          }
         }
       }
     } finally {
