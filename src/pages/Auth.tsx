@@ -156,6 +156,19 @@ export default function Auth() {
             {isLogin ? 'Sign In' : 'Create Account'}
           </h2>
 
+          {rateLimitError && (
+            <div className="mb-4 p-3 bg-destructive/10 border-2 border-destructive/30 rounded-sm flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+              <div className="text-sm text-destructive">
+                <p className="font-semibold">Too many attempts</p>
+                <p className="text-xs mt-1">
+                  Our email provider limits how many confirmation emails can be sent per hour. 
+                  Please wait {cooldownSeconds > 0 ? `${cooldownSeconds}s` : 'a moment'} before trying again.
+                </p>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="uppercase text-xs font-bold">Email</Label>
