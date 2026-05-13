@@ -5,7 +5,7 @@ import { NeuCard } from '@/components/ui/neu-card';
 import { NeuButton } from '@/components/ui/neu-button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dumbbell, Mail, Lock, Loader2 } from 'lucide-react';
+import { Dumbbell, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
